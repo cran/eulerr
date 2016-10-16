@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+
+<head>
+
+<meta charset="utf-8">
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+<meta name="generator" content="pandoc" />
+
+<meta name="viewport" content="width=device-width, initial-scale=1">
+
+<meta name="author" content="Johan Larsson" />
+
+<meta name="date" content="2016-10-16" />
+
+<title>An introduction to eulerr</title>
+
+
+
+<style type="text/css">code{white-space: pre;}</style>
+<style type="text/css">
+div.sourceCode { overflow-x: auto; }
+table.sourceCode, tr.sourceCode, td.lineNumbers, td.sourceCode {
+  margin: 0; padding: 0; vertical-align: baseline; border: none; }
+table.sourceCode { width: 100%; line-height: 100%; }
+td.lineNumbers { text-align: right; padding-right: 4px; padding-left: 4px; color: #aaaaaa; border-right: 1px solid #aaaaaa; }
+td.sourceCode { padding-left: 5px; }
+code > span.kw { color: #007020; font-weight: bold; } /* Keyword */
+code > span.dt { color: #902000; } /* DataType */
+code > span.dv { color: #40a070; } /* DecVal */
+code > span.bn { color: #40a070; } /* BaseN */
+code > span.fl { color: #40a070; } /* Float */
+code > span.ch { color: #4070a0; } /* Char */
+code > span.st { color: #4070a0; } /* String */
+code > span.co { color: #60a0b0; font-style: italic; } /* Comment */
+code > span.ot { color: #007020; } /* Other */
+code > span.al { color: #ff0000; font-weight: bold; } /* Alert */
+code > span.fu { color: #06287e; } /* Function */
+code > span.er { color: #ff0000; font-weight: bold; } /* Error */
+code > span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warning */
+code > span.cn { color: #880000; } /* Constant */
+code > span.sc { color: #4070a0; } /* SpecialChar */
+code > span.vs { color: #4070a0; } /* VerbatimString */
+code > span.ss { color: #bb6688; } /* SpecialString */
+code > span.im { } /* Import */
+code > span.va { color: #19177c; } /* Variable */
+code > span.cf { color: #007020; font-weight: bold; } /* ControlFlow */
+code > span.op { color: #666666; } /* Operator */
+code > span.bu { } /* BuiltIn */
+code > span.ex { } /* Extension */
+code > span.pp { color: #bc7a00; } /* Preprocessor */
+code > span.at { color: #7d9029; } /* Attribute */
+code > span.do { color: #ba2121; font-style: italic; } /* Documentation */
+code > span.an { color: #60a0b0; font-weight: bold; font-style: italic; } /* Annotation */
+code > span.cv { color: #60a0b0; font-weight: bold; font-style: italic; } /* CommentVar */
+code > span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Information */
+</style>
+
+
+
+<link href="data:text/css;charset=utf-8,body%20%7B%0Abackground%2Dcolor%3A%20%23fff%3B%0Amargin%3A%201em%20auto%3B%0Amax%2Dwidth%3A%20700px%3B%0Aoverflow%3A%20visible%3B%0Apadding%2Dleft%3A%202em%3B%0Apadding%2Dright%3A%202em%3B%0Afont%2Dfamily%3A%20%22Open%20Sans%22%2C%20%22Helvetica%20Neue%22%2C%20Helvetica%2C%20Arial%2C%20sans%2Dserif%3B%0Afont%2Dsize%3A%2014px%3B%0Aline%2Dheight%3A%201%2E35%3B%0A%7D%0A%23header%20%7B%0Atext%2Dalign%3A%20center%3B%0A%7D%0A%23TOC%20%7B%0Aclear%3A%20both%3B%0Amargin%3A%200%200%2010px%2010px%3B%0Apadding%3A%204px%3B%0Awidth%3A%20400px%3B%0Aborder%3A%201px%20solid%20%23CCCCCC%3B%0Aborder%2Dradius%3A%205px%3B%0Abackground%2Dcolor%3A%20%23f6f6f6%3B%0Afont%2Dsize%3A%2013px%3B%0Aline%2Dheight%3A%201%2E3%3B%0A%7D%0A%23TOC%20%2Etoctitle%20%7B%0Afont%2Dweight%3A%20bold%3B%0Afont%2Dsize%3A%2015px%3B%0Amargin%2Dleft%3A%205px%3B%0A%7D%0A%23TOC%20ul%20%7B%0Apadding%2Dleft%3A%2040px%3B%0Amargin%2Dleft%3A%20%2D1%2E5em%3B%0Amargin%2Dtop%3A%205px%3B%0Amargin%2Dbottom%3A%205px%3B%0A%7D%0A%23TOC%20ul%20ul%20%7B%0Amargin%2Dleft%3A%20%2D2em%3B%0A%7D%0A%23TOC%20li%20%7B%0Aline%2Dheight%3A%2016px%3B%0A%7D%0Atable%20%7B%0Amargin%3A%201em%20auto%3B%0Aborder%2Dwidth%3A%201px%3B%0Aborder%2Dcolor%3A%20%23DDDDDD%3B%0Aborder%2Dstyle%3A%20outset%3B%0Aborder%2Dcollapse%3A%20collapse%3B%0A%7D%0Atable%20th%20%7B%0Aborder%2Dwidth%3A%202px%3B%0Apadding%3A%205px%3B%0Aborder%2Dstyle%3A%20inset%3B%0A%7D%0Atable%20td%20%7B%0Aborder%2Dwidth%3A%201px%3B%0Aborder%2Dstyle%3A%20inset%3B%0Aline%2Dheight%3A%2018px%3B%0Apadding%3A%205px%205px%3B%0A%7D%0Atable%2C%20table%20th%2C%20table%20td%20%7B%0Aborder%2Dleft%2Dstyle%3A%20none%3B%0Aborder%2Dright%2Dstyle%3A%20none%3B%0A%7D%0Atable%20thead%2C%20table%20tr%2Eeven%20%7B%0Abackground%2Dcolor%3A%20%23f7f7f7%3B%0A%7D%0Ap%20%7B%0Amargin%3A%200%2E5em%200%3B%0A%7D%0Ablockquote%20%7B%0Abackground%2Dcolor%3A%20%23f6f6f6%3B%0Apadding%3A%200%2E25em%200%2E75em%3B%0A%7D%0Ahr%20%7B%0Aborder%2Dstyle%3A%20solid%3B%0Aborder%3A%20none%3B%0Aborder%2Dtop%3A%201px%20solid%20%23777%3B%0Amargin%3A%2028px%200%3B%0A%7D%0Adl%20%7B%0Amargin%2Dleft%3A%200%3B%0A%7D%0Adl%20dd%20%7B%0Amargin%2Dbottom%3A%2013px%3B%0Amargin%2Dleft%3A%2013px%3B%0A%7D%0Adl%20dt%20%7B%0Afont%2Dweight%3A%20bold%3B%0A%7D%0Aul%20%7B%0Amargin%2Dtop%3A%200%3B%0A%7D%0Aul%20li%20%7B%0Alist%2Dstyle%3A%20circle%20outside%3B%0A%7D%0Aul%20ul%20%7B%0Amargin%2Dbottom%3A%200%3B%0A%7D%0Apre%2C%20code%20%7B%0Abackground%2Dcolor%3A%20%23f7f7f7%3B%0Aborder%2Dradius%3A%203px%3B%0Acolor%3A%20%23333%3B%0Awhite%2Dspace%3A%20pre%2Dwrap%3B%20%0A%7D%0Apre%20%7B%0Aborder%2Dradius%3A%203px%3B%0Amargin%3A%205px%200px%2010px%200px%3B%0Apadding%3A%2010px%3B%0A%7D%0Apre%3Anot%28%5Bclass%5D%29%20%7B%0Abackground%2Dcolor%3A%20%23f7f7f7%3B%0A%7D%0Acode%20%7B%0Afont%2Dfamily%3A%20Consolas%2C%20Monaco%2C%20%27Courier%20New%27%2C%20monospace%3B%0Afont%2Dsize%3A%2085%25%3B%0A%7D%0Ap%20%3E%20code%2C%20li%20%3E%20code%20%7B%0Apadding%3A%202px%200px%3B%0A%7D%0Adiv%2Efigure%20%7B%0Atext%2Dalign%3A%20center%3B%0A%7D%0Aimg%20%7B%0Abackground%2Dcolor%3A%20%23FFFFFF%3B%0Apadding%3A%202px%3B%0Aborder%3A%201px%20solid%20%23DDDDDD%3B%0Aborder%2Dradius%3A%203px%3B%0Aborder%3A%201px%20solid%20%23CCCCCC%3B%0Amargin%3A%200%205px%3B%0A%7D%0Ah1%20%7B%0Amargin%2Dtop%3A%200%3B%0Afont%2Dsize%3A%2035px%3B%0Aline%2Dheight%3A%2040px%3B%0A%7D%0Ah2%20%7B%0Aborder%2Dbottom%3A%204px%20solid%20%23f7f7f7%3B%0Apadding%2Dtop%3A%2010px%3B%0Apadding%2Dbottom%3A%202px%3B%0Afont%2Dsize%3A%20145%25%3B%0A%7D%0Ah3%20%7B%0Aborder%2Dbottom%3A%202px%20solid%20%23f7f7f7%3B%0Apadding%2Dtop%3A%2010px%3B%0Afont%2Dsize%3A%20120%25%3B%0A%7D%0Ah4%20%7B%0Aborder%2Dbottom%3A%201px%20solid%20%23f7f7f7%3B%0Amargin%2Dleft%3A%208px%3B%0Afont%2Dsize%3A%20105%25%3B%0A%7D%0Ah5%2C%20h6%20%7B%0Aborder%2Dbottom%3A%201px%20solid%20%23ccc%3B%0Afont%2Dsize%3A%20105%25%3B%0A%7D%0Aa%20%7B%0Acolor%3A%20%230033dd%3B%0Atext%2Ddecoration%3A%20none%3B%0A%7D%0Aa%3Ahover%20%7B%0Acolor%3A%20%236666ff%3B%20%7D%0Aa%3Avisited%20%7B%0Acolor%3A%20%23800080%3B%20%7D%0Aa%3Avisited%3Ahover%20%7B%0Acolor%3A%20%23BB00BB%3B%20%7D%0Aa%5Bhref%5E%3D%22http%3A%22%5D%20%7B%0Atext%2Ddecoration%3A%20underline%3B%20%7D%0Aa%5Bhref%5E%3D%22https%3A%22%5D%20%7B%0Atext%2Ddecoration%3A%20underline%3B%20%7D%0A%0Acode%20%3E%20span%2Ekw%20%7B%20color%3A%20%23555%3B%20font%2Dweight%3A%20bold%3B%20%7D%20%0Acode%20%3E%20span%2Edt%20%7B%20color%3A%20%23902000%3B%20%7D%20%0Acode%20%3E%20span%2Edv%20%7B%20color%3A%20%2340a070%3B%20%7D%20%0Acode%20%3E%20span%2Ebn%20%7B%20color%3A%20%23d14%3B%20%7D%20%0Acode%20%3E%20span%2Efl%20%7B%20color%3A%20%23d14%3B%20%7D%20%0Acode%20%3E%20span%2Ech%20%7B%20color%3A%20%23d14%3B%20%7D%20%0Acode%20%3E%20span%2Est%20%7B%20color%3A%20%23d14%3B%20%7D%20%0Acode%20%3E%20span%2Eco%20%7B%20color%3A%20%23888888%3B%20font%2Dstyle%3A%20italic%3B%20%7D%20%0Acode%20%3E%20span%2Eot%20%7B%20color%3A%20%23007020%3B%20%7D%20%0Acode%20%3E%20span%2Eal%20%7B%20color%3A%20%23ff0000%3B%20font%2Dweight%3A%20bold%3B%20%7D%20%0Acode%20%3E%20span%2Efu%20%7B%20color%3A%20%23900%3B%20font%2Dweight%3A%20bold%3B%20%7D%20%20code%20%3E%20span%2Eer%20%7B%20color%3A%20%23a61717%3B%20background%2Dcolor%3A%20%23e3d2d2%3B%20%7D%20%0A" rel="stylesheet" type="text/css" />
+
+</head>
+
+<body>
+
+
+
+
+<h1 class="title toc-ignore">An introduction to eulerr</h1>
+<h4 class="author"><em>Johan Larsson</em></h4>
+<h4 class="date"><em>2016-10-16</em></h4>
+
+
+
+<p><strong>eulerr</strong> generates area-proportional euler diagrams that display set relationships (intersections, unions, and disjoints) with circles. <a href="https://en.wikipedia.org/wiki/Euler_diagram">Euler diagrams</a> are Venn diagrams without the requirement that all set interactions be present (whether they are empty or not). That is, depending on input, eulerr will sometimes produce Venn diagrams but sometimes not.</p>
+<div id="background" class="section level2">
+<h2>Background</h2>
+<p>R features a number of packages that produce euler and/or venn diagrams; some of the more prominent ones (on CRAN) are</p>
+<ul>
+<li><a href="https://cran.r-project.org/package=eVenn">eVenn</a>,</li>
+<li><a href="https://cran.r-project.org/package=VennDiagram">VennDiagram</a>,</li>
+<li><a href="https://cran.r-project.org/package=venn">venn</a>,</li>
+<li><a href="https://cran.r-project.org/package=colorfulVennPlot">colorfulVennPlot</a>, and</li>
+<li><a href="https://cran.r-project.org/package=venneuler">venneuler</a>.</li>
+</ul>
+<p>The last of these serves as the primary inspiration for this package, along with the refinements that Ben Fredrickson has presented on his <a href="http://www.benfrederickson.com/">blog</a> and made available in his javascript <a href="https://github.com/benfred/venn.js">venn.js</a>.</p>
+<p>venneuler, however, is written in java, which prevents R users from browsing the source code (unless they are also literate in java) or contributing. Furthermore, venneuler is known to produce imperfect output for set relationships that have perfect euler diagram solutions. Consider, for instance</p>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">venn_fit &lt;-<span class="st"> </span>venneuler::<span class="kw">venneuler</span>(<span class="kw">c</span>(<span class="dt">A =</span> <span class="dv">75</span>, <span class="dt">B =</span> <span class="dv">50</span>, <span class="st">&quot;A&amp;B&quot;</span> =<span class="st"> </span><span class="dv">0</span>))
+<span class="kw">par</span>(<span class="dt">mar =</span> <span class="kw">c</span>(<span class="dv">0</span>, <span class="dv">0</span>, <span class="dv">0</span>, <span class="dv">0</span>))
+<span class="kw">plot</span>(venn_fit)</code></pre></div>
+<p><img src="data:image/png;base64,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" /><!-- --></p>
+<p>that reasonably should not display any intersection between <code>A</code> and <code>B</code>.</p>
+</div>
+<div id="enter-eulerr" class="section level2">
+<h2>Enter eulerr</h2>
+<p>eulerr is based around the improvements to <strong>venneuler</strong> that Ben Fredrickson introcued with <strong>venn.js</strong> but with rewritten code, different optimizers, and methods to calculate stress statistics. It also provides a highly customizable interface for its plotting function.</p>
+<div id="input" class="section level3">
+<h3>Input</h3>
+<p>Currently, it is possible to provide input to <code>eulerr</code> as either</p>
+<ul>
+<li>a named numeric vector or</li>
+<li>a matrix of logicals with columns representing sets and rows the set relationships for each observation.</li>
+</ul>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">library</span>(eulerr)
+
+<span class="co"># Input in the form of a named numeric vector</span>
+fit1 &lt;-<span class="st"> </span><span class="kw">eulerr</span>(<span class="kw">c</span>(<span class="st">&quot;A&quot;</span> =<span class="st"> </span><span class="dv">25</span>, <span class="st">&quot;B&quot;</span> =<span class="st"> </span><span class="dv">5</span>, <span class="st">&quot;C&quot;</span> =<span class="st"> </span><span class="dv">5</span>,
+                 <span class="st">&quot;A&amp;B&quot;</span> =<span class="st"> </span><span class="dv">5</span>, <span class="st">&quot;A&amp;C&quot;</span> =<span class="st"> </span><span class="dv">5</span>, <span class="st">&quot;B&amp;C&quot;</span> =<span class="st"> </span><span class="dv">3</span>,
+                 <span class="st">&quot;A&amp;B&amp;C&quot;</span> =<span class="st"> </span><span class="dv">3</span>))
+
+<span class="co"># Input as a matrix of logicals</span>
+<span class="kw">set.seed</span>(<span class="dv">1</span>)
+mat &lt;-
+<span class="st">  </span><span class="kw">cbind</span>(
+  <span class="dt">A =</span> <span class="kw">sample</span>(<span class="kw">c</span>(<span class="ot">TRUE</span>, <span class="ot">TRUE</span>, <span class="ot">FALSE</span>), <span class="dt">size =</span> <span class="dv">50</span>, <span class="dt">replace =</span> <span class="ot">TRUE</span>),
+  <span class="dt">B =</span> <span class="kw">sample</span>(<span class="kw">c</span>(<span class="ot">TRUE</span>, <span class="ot">FALSE</span>), <span class="dt">size =</span> <span class="dv">50</span>, <span class="dt">replace =</span> <span class="ot">TRUE</span>),
+  <span class="dt">C =</span> <span class="kw">sample</span>(<span class="kw">c</span>(<span class="ot">TRUE</span>, <span class="ot">FALSE</span>, <span class="ot">FALSE</span>, <span class="ot">FALSE</span>), <span class="dt">size =</span> <span class="dv">50</span>, <span class="dt">replace =</span> <span class="ot">TRUE</span>)
+  )
+fit2 &lt;-<span class="st"> </span><span class="kw">eulerr</span>(mat)</code></pre></div>
+</div>
+<div id="fit" class="section level3">
+<h3>Fit</h3>
+<p>We can expect our results by printing the eulerr object</p>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">fit2</code></pre></div>
+<pre><code>## $coefficients
+##           x          y        r
+## A 34.398248 19.1381437 33.09853
+## B 18.887664 26.7291801 32.01503
+## C  7.988108  0.5417698 21.44077
+## 
+## $original.values
+##     A     B     C   A&amp;B   A&amp;C   B&amp;C A&amp;B&amp;C 
+##    31    29    13    20     6     7     5 
+## 
+## $fitted.values
+##         A         B         C       A&amp;B       A&amp;C       B&amp;C     A&amp;B&amp;C 
+## 31.005893 29.009133 13.010910 19.977026  5.894665  6.927797  5.191156 
+## 
+## $residuals
+##            A            B            C          A&amp;B          A&amp;C 
+## -0.005892980 -0.009132989 -0.010909949  0.022973583  0.105335028 
+##          B&amp;C        A&amp;B&amp;C 
+##  0.072202508 -0.191155861 
+## 
+## $stress
+## [1] 2.941349e-05
+## 
+## attr(,&quot;class&quot;)
+## [1] &quot;eulerr&quot; &quot;list&quot;</code></pre>
+<p>or directly access and plot the residuals and plot using standard methods.</p>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">resid</span>(fit2)</code></pre></div>
+<pre><code>##            A            B            C          A&amp;B          A&amp;C 
+## -0.005892980 -0.009132989 -0.010909949  0.022973583  0.105335028 
+##          B&amp;C        A&amp;B&amp;C 
+##  0.072202508 -0.191155861</code></pre>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="co"># Cleveland dot plot of the residuals</span>
+graphics::<span class="kw">dotchart</span>(<span class="kw">resid</span>(fit2))
+<span class="kw">abline</span>(<span class="dt">v =</span> <span class="dv">0</span>, <span class="dt">lty =</span> <span class="dv">3</span>)</code></pre></div>
+<p><img src="data:image/png;base64,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" /><!-- --></p>
+<p>This shows us that the <code>A&amp;B&amp;C</code> intersection is somewhat overrepresented in <code>fit2</code>. Althgouh, given that these residuals are on the scale of the original values, the residuals are arguably small.</p>
+<p>For an overall measure of the fit of the solution, we use the same stress statistic that Leland Wilkinson presented in his academic paper on venneuler (<span class="citation">Wilkinson (2012)</span>), which is given by the sums of squared residuals divided by the total sums of squares: <span class="math display">\[\frac{\sum \limits_{i=1}^n (f_i -y_i)^2}{\sum \limits_{i=1}^n (y_i - \bar{y})^2}\]</span></p>
+<p>For our solution, the stress is</p>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">fit2$stress</code></pre></div>
+<pre><code>## [1] 2.941349e-05</code></pre>
+<p>, which is quite low.</p>
+<p>We can now be confident that eulerr provides a reasonable representation of our input. Were it otherwise, we would do best to stop here and look for another way to visualize our data. (I suggest the excellent <a href="https://cran.r-project.org/package=UpSetR">UpSetR</a> package.)</p>
+</div>
+<div id="plotting" class="section level3">
+<h3>Plotting</h3>
+<p>No we get to the fun part: plotting our euler fit. This is easy, as well as highly customizable, with eulerr.</p>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">par</span>(<span class="dt">mar =</span> <span class="kw">c</span>(<span class="dv">0</span>, <span class="dv">0</span>, <span class="dv">0</span>, <span class="dv">0</span>))
+<span class="kw">plot</span>(fit2)
+
+<span class="co"># Change fill colors, border type (remove) and fontface.</span>
+<span class="kw">plot</span>(fit2,
+     <span class="dt">polygon_args =</span> <span class="kw">list</span>(<span class="dt">col =</span> <span class="kw">c</span>(<span class="st">&quot;dodgerblue4&quot;</span>, <span class="st">&quot;darkgoldenrod1&quot;</span>, <span class="st">&quot;cornsilk4&quot;</span>),
+                         <span class="dt">border =</span> <span class="st">&quot;transparent&quot;</span>),
+     <span class="dt">text_args =</span> <span class="kw">list</span>(<span class="dt">font =</span> <span class="dv">8</span>))</code></pre></div>
+<p><img src="data:image/png;base64,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" /><img src="data:image/png;base64,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" /></p>
+<p>eulerr’s default color palette is taken from <a href="https://cran.r-project.org/package=qualpalr">qualpalr</a> – another package that I have developed – which uses color difference algorithms to generate distinct qualitative color palettes.</p>
+</div>
+</div>
+<div id="details" class="section level2">
+<h2>Details</h2>
+<p>Details of the implementation will be left for a future vignette but almost completely resemble the approach documented <a href="http://www.benfrederickson.com/better-venn-diagrams/">here</a>.</p>
+</div>
+<div id="thanks" class="section level2">
+<h2>Thanks</h2>
+<p>eulerr would not be possible without Ben Fredrickson’s work on <a href="http://www.benfrederickson.com">venn.js</a> or Leland Wilkinson’s <a href="https://cran.r-project.org/package=venneuler">venneuler</a>.</p>
+</div>
+<div id="references" class="section level2 unnumbered">
+<h2>References</h2>
+<div id="refs" class="references">
+<div id="ref-wilkinson_exact_2012">
+<p>Wilkinson, L. 2012. “Exact and Approximate Area-Proportional Circular Venn and Euler Diagrams.” <em>IEEE Transactions on Visualization and Computer Graphics</em> 18 (2): 321–31. doi:<a href="https://doi.org/10.1109/TVCG.2011.56">10.1109/TVCG.2011.56</a>.</p>
+</div>
+</div>
+</div>
+
+
+
+<!-- dynamically load mathjax for compatibility with self-contained -->
+<script>
+  (function () {
+    var script = document.createElement("script");
+    script.type = "text/javascript";
+    script.src  = "https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML";
+    document.getElementsByTagName("head")[0].appendChild(script);
+  })();
+</script>
+
+</body>
+</html>
