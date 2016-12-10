@@ -1,15 +1,15 @@
 Package: eulerr
 Title: Area-Proportional Euler Diagrams
-Version: 0.1.0
+Version: 1.0.0
 Authors@R: person("Johan", "Larsson", email = "johanlarsson@outlook.com",
                   role = c("aut", "cre"))
 Description: If possible, generates exactly area-proportional Euler diagrams,
-    or otherwise approximately proportional diagrams using numeric optimization.
-    A Euler diagram is a generalization of a Venn diagram, relaxing the
-    criterion that all interactions need to be represented.
+    or otherwise approximately proportional diagrams using numerical
+    optimization. A Euler diagram is a generalization of a Venn diagram,
+    relaxing the criterion that all interactions need to be represented.
 Depends: R (>= 3.3.1)
-Imports: assertthat (>= 0.1), randtoolbox (>= 1.17), grDevices, utils,
-        stats, graphics
+Imports: assertthat (>= 0.1), MASS (>= 7.3), grDevices, utils, stats,
+        graphics, Rcpp (>= 0.12.8)
 Suggests: knitr, rmarkdown, testthat, venneuler
 License: GPL-3
 Encoding: UTF-8
@@ -18,9 +18,10 @@ VignetteBuilder: knitr
 URL: https://github.com/jolars/eulerr
 BugReports: https://github.com/jolars/eulerr/issues
 RoxygenNote: 5.0.1
-NeedsCompilation: no
-Packaged: 2016-10-15 22:34:30 UTC; johan
+LinkingTo: Rcpp, RcppArmadillo
+NeedsCompilation: yes
+Packaged: 2016-12-10 12:36:38 UTC; johan
 Author: Johan Larsson [aut, cre]
 Maintainer: Johan Larsson <johanlarsson@outlook.com>
 Repository: CRAN
-Date/Publication: 2016-10-16 02:45:21
+Date/Publication: 2016-12-10 22:49:28

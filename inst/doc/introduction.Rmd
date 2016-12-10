@@ -28,35 +28,34 @@ some of the more prominent ones (on CRAN) are
 * [colorfulVennPlot](https://cran.r-project.org/package=colorfulVennPlot), and
 * [venneuler](https://cran.r-project.org/package=venneuler).
 
-The last of these serves as the primary inspiration for this package, along with
-the refinements that Ben Fredrickson has presented on his
+The last of these (venneuler) serves as the primary inspiration for this package,
+along with the refinements that Ben Fredrickson has presented on his
 [blog](http://www.benfrederickson.com/) and made available in his javascript
 [venn.js](https://github.com/benfred/venn.js).
 
-venneuler, however, is written in java, which prevents R users from 
+venneuler, however, is written in java, preventing R users from 
 browsing the source code (unless they are also literate in java) or
 contributing. Furthermore, venneuler is known to produce imperfect output for
-set relationships that have perfect euler diagram solutions. Consider,
-for instance
+set configurations that have perfect solutions. Consider,
+for instance, the following example in which the intersection between `A` and
+`B` is both needless and unwanted.
 
-```{r venneuler_failure}
-venn_fit <- venneuler::venneuler(c(A = 75, B = 50, "A&B" = 0))
+```{r venneuler_failure, fig.height=5, fig.width=5, fig.cap='venneuler plot with unwanted overlap.', dev.args=list(type='cairo-png')}
+library(venneuler,  quietly = TRUE)
+venn_fit <- venneuler(c(A = 75, B = 50, "A&B" = 0))
 par(mar = c(0, 0, 0, 0))
 plot(venn_fit)
 ```
 
-that reasonably should not display any intersection between `A` and `B`.
-
 ## Enter eulerr
 
-eulerr is based around the improvements to **venneuler** that Ben Fredrickson
-introcued with **venn.js** but with rewritten code, different optimizers, and 
-methods to calculate stress statistics. It also provides a highly customizable
-interface for its plotting function.
+eulerr is based on the improvements to **venneuler** that Ben Fredrickson
+introduced with **venn.js** but has been recoded from scratch, uses different
+optimizers, and returns statistics featured in `venneuler` and `eulerAPE`.
 
 ### Input
 
-Currently, it is possible to provide input to `eulerr` as either
+At the time of writing, it is possible to provide input to `eulerr` as either
 
 * a named numeric vector or
 * a matrix of logicals with columns representing sets and rows the set
@@ -72,50 +71,79 @@ fit1 <- eulerr(c("A" = 25, "B" = 5, "C" = 5,
 
 # Input as a matrix of logicals
 set.seed(1)
-mat <-
-  cbind(
+mat <- cbind(
   A = sample(c(TRUE, TRUE, FALSE), size = 50, replace = TRUE),
   B = sample(c(TRUE, FALSE), size = 50, replace = TRUE),
   C = sample(c(TRUE, FALSE, FALSE, FALSE), size = 50, replace = TRUE)
-  )
+)
 fit2 <- eulerr(mat)
 ```
 
 ### Fit
 
-We can expect our results by printing the eulerr object
+We inspect our results by printing the eulerr object
 
 ```{r fit1_print}
 fit2
 ```
 
-or directly access and plot the residuals and plot using standard methods.
+or directly access and plot the residuals.
 
-```{r residual_plot}
-resid(fit2)
-
+```{r residual_plot, fig.cap='Residuals for the eulerr fit.'}
 # Cleveland dot plot of the residuals
 graphics::dotchart(resid(fit2))
 abline(v = 0, lty = 3)
 ```
 
 This shows us that the `A&B&C` intersection is somewhat overrepresented in
-`fit2`. Althgouh, given that these residuals are on the scale of the original
-values, the residuals are arguably small.
+`fit2`. Given that these residuals are on the scale of the original
+values, however, the residuals are arguably of little concern.
 
-For an overall measure of the fit of the solution, we use the same stress
-statistic that Leland Wilkinson presented in his academic paper on venneuler 
-(@wilkinson_exact_2012), which is given by the sums of squared residuals divided
-by the total sums of squares:
-$$\frac{\sum \limits_{i=1}^n (f_i -y_i)^2}{\sum \limits_{i=1}^n (y_i - \bar{y})^2}$$
+As an alternative, we could plot the circles in another program by retrieving
+their coordinates and radii 
 
-For our solution, the stress is
-
-```{r stress}
-fit2$stress
+```{r coefs}
+coef(fit2)
 ```
 
-, which is quite low.
+### Starting configuration
+
+A starting configuration is obtained via a constrained version of 
+multidimensional scaling that has been explained thoroughly
+[elsewhere]{http://www.benfrederickson.com/better-venn-diagrams/}. 
+
+### Optimization
+
+The starting configuration is based solely on the two-way relationships of the
+sets so has to be optimized for most set relationships. We try to optimize the 
+coordinates and radii of the solution with the objective of producing a diagram
+that is as *accurate* as possible. In this context, however, accuracy is an
+ambigious objective that has produced a slew of proposals. In eulerr, the user
+can choose between the cost function of eulerAPE (the default) (@micallef2014)
+and the stress statistic of venneuler (@wilkinson_exact_2012).
+
+eulerAPE's cost function is computed by  
+
+$$\frac{1}{n} \sum_{i=1}^{n} \frac{(y_i - \hat{y}_i) ^ 2}{\hat{y}_i}$$
+
+where $\hat{y}_i$ in an estimate of $y_i$ that is explored during
+optimization and $n$ is the number of set relationships. venneuler's stress
+function is defined as
+
+$$\frac{\sum_{i=1}^{n} (y_i - \hat{y}_i) ^ 2}{\sum_{i=1}^{n} y_i ^ 2}$$
+
+where $\hat{y}_i$ is an OLS estimate from the regression of the fitted
+areas on the original areas that is being explored during optimization.
+
+### Goodness-of-fit
+
+For goodness-of-fit measures, we the same stress statistic from venneuler
+that was used during optimization (@wilkinson_exact_2012) and the diagError
+statistic from eulerAPE (@micallef2014) which is
+
+$$ \max_{i = 1, 2, \dots, n} \left| \frac{y_i}{\sum y_i} - \frac{\hat{y}_i}{\sum \hat{y}_i} \right|$$
+Our diagError is ```r round(fit2$diag_error, 4)``` and our stress is
+```r round(fit2$stress, 4)```, suggesting that the fit is accurate.
 
 We can now be confident that eulerr provides a reasonable representation of
 our input. Were it otherwise, we would do best to stop here and look for another
@@ -124,11 +152,10 @@ way to visualize our data. (I suggest the excellent
 
 ### Plotting
 
-No we get to the fun part: plotting our euler fit. This is easy, as well as
+No we get to the fun part: plotting our diagram. This is easy, as well as
 highly customizable, with eulerr.
 
-```{r eulerr_plot, fig.show='hold'}
-par(mar = c(0, 0, 0, 0))
+```{r eulerr_plot, fig.width=4, fig.height=4, fig.show='hold', fig.cap='eulerr plots can be modified in every possible way.', dev.args=list(type='cairo-png')}
 plot(fit2)
 
 # Change fill colors, border type (remove) and fontface.
@@ -143,17 +170,10 @@ eulerr's default color palette is taken from
 package that I have developed -- which uses color difference algorithms to 
 generate distinct qualitative color palettes.
 
-## Details
-
-Details of the implementation will be left for a future vignette but almost
-completely resemble the approach documented
-[here](http://www.benfrederickson.com/better-venn-diagrams/).
-
-## Thanks
+## Acknowledgements
 
 eulerr would not be possible without Ben Fredrickson's work on
 [venn.js](http://www.benfrederickson.com) or Leland Wilkinson's
 [venneuler](https://cran.r-project.org/package=venneuler).
 
 ## References
-
