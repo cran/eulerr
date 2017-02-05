@@ -1,3 +1,37 @@
+# eulerr 1.1.0
+## Major changes
+* `eulerr()` and its related methods been deprecated and are being replaced by
+`euler()`, which takes slightly different input. Notably, the default is
+now to provide input in the form of disjoint class combinations, rather
+than unions. This is partly to make the function a drop-in replacement for
+`venneuler::venneuler`.
+* `plot.euler()` has been completely revamped, now interfacing `xyplot()` from
+lattice. As a result, arguments `polygon_args`, `mar`, and `text_args` have been
+deprecated.
+
+## Minor changes
+* Added a `counts` argument to `plot.eulerr`, which intersections and
+complements with counts from the original set specificiation (#6).
+* Added a `key` argument to `plot.eulerr` that prints a legend next to the
+diagram.
+* Switched to `atan2()` from RcppArmadillo.
+* Added version requirement for RcppArmadillo.
+* Dropped dependency on MASS for computing label placement, replacing it
+with a faster, geometric algorithm.
+* Dropped the cost function argument `cost` and now forces the function to
+use sums of squares, which is more or less equivalent to the cost function
+from `venneuler`.
+* Color palettes in `plot.euler()` now chooses colors adapted to color vision
+deficiency (deuteranopia). With increasingly large numbers of sets, this 
+adaptation is relaxed to make sure that colors are kept visually distinct.
+* `euler()` now uses `nlm()` instead of `optim(method = "Nelder-Mead")` for
+its final optimization.
+
+## Bug fixes
+* The previous algorithm incorrectly computed loss from unions of sets. It now
+computes loss from disjoint class combinations.
+* Added missing row breaks in `print.eulerr`.
+
 # eulerr 1.0.0
 
 ## New features

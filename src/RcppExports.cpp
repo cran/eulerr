@@ -6,13 +6,59 @@
 
 using namespace Rcpp;
 
+// bit_index
+arma::umat bit_index(int n);
+RcppExport SEXP eulerr_bit_index(SEXP nSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< int >::type n(nSEXP);
+    rcpp_result_gen = Rcpp::wrap(bit_index(n));
+    return rcpp_result_gen;
+END_RCPP
+}
+// return_intersections
+arma::vec return_intersections(arma::vec par);
+RcppExport SEXP eulerr_return_intersections(SEXP parSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< arma::vec >::type par(parSEXP);
+    rcpp_result_gen = Rcpp::wrap(return_intersections(par));
+    return rcpp_result_gen;
+END_RCPP
+}
+// venneuler_stress
+double venneuler_stress(const arma::vec& areas, const arma::vec& fit);
+RcppExport SEXP eulerr_venneuler_stress(SEXP areasSEXP, SEXP fitSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< const arma::vec& >::type areas(areasSEXP);
+    Rcpp::traits::input_parameter< const arma::vec& >::type fit(fitSEXP);
+    rcpp_result_gen = Rcpp::wrap(venneuler_stress(areas, fit));
+    return rcpp_result_gen;
+END_RCPP
+}
+// loss_final
+double loss_final(const arma::vec par, const arma::vec areas);
+RcppExport SEXP eulerr_loss_final(SEXP parSEXP, SEXP areasSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< const arma::vec >::type par(parSEXP);
+    Rcpp::traits::input_parameter< const arma::vec >::type areas(areasSEXP);
+    rcpp_result_gen = Rcpp::wrap(loss_final(par, areas));
+    return rcpp_result_gen;
+END_RCPP
+}
 // choose_two
-arma::umat choose_two(arma::uvec x);
+IntegerMatrix choose_two(IntegerVector x);
 RcppExport SEXP eulerr_choose_two(SEXP xSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< arma::uvec >::type x(xSEXP);
+    Rcpp::traits::input_parameter< IntegerVector >::type x(xSEXP);
     rcpp_result_gen = Rcpp::wrap(choose_two(x));
     return rcpp_result_gen;
 END_RCPP
@@ -27,51 +73,6 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< NumericVector >::type r2(r2SEXP);
     Rcpp::traits::input_parameter< NumericVector >::type d(dSEXP);
     rcpp_result_gen = Rcpp::wrap(discdisc(r1, r2, d));
-    return rcpp_result_gen;
-END_RCPP
-}
-// return_intersections
-std::vector<double> return_intersections(arma::vec par, arma::vec areas, arma::umat id, arma::umat two, arma::uvec twos, arma::uvec ones);
-RcppExport SEXP eulerr_return_intersections(SEXP parSEXP, SEXP areasSEXP, SEXP idSEXP, SEXP twoSEXP, SEXP twosSEXP, SEXP onesSEXP) {
-BEGIN_RCPP
-    Rcpp::RObject rcpp_result_gen;
-    Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< arma::vec >::type par(parSEXP);
-    Rcpp::traits::input_parameter< arma::vec >::type areas(areasSEXP);
-    Rcpp::traits::input_parameter< arma::umat >::type id(idSEXP);
-    Rcpp::traits::input_parameter< arma::umat >::type two(twoSEXP);
-    Rcpp::traits::input_parameter< arma::uvec >::type twos(twosSEXP);
-    Rcpp::traits::input_parameter< arma::uvec >::type ones(onesSEXP);
-    rcpp_result_gen = Rcpp::wrap(return_intersections(par, areas, id, two, twos, ones));
-    return rcpp_result_gen;
-END_RCPP
-}
-// stress
-double stress(arma::vec areas, arma::vec fit);
-RcppExport SEXP eulerr_stress(SEXP areasSEXP, SEXP fitSEXP) {
-BEGIN_RCPP
-    Rcpp::RObject rcpp_result_gen;
-    Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< arma::vec >::type areas(areasSEXP);
-    Rcpp::traits::input_parameter< arma::vec >::type fit(fitSEXP);
-    rcpp_result_gen = Rcpp::wrap(stress(areas, fit));
-    return rcpp_result_gen;
-END_RCPP
-}
-// compute_fit
-double compute_fit(arma::vec par, arma::vec areas, arma::umat id, arma::umat two, arma::uvec twos, arma::uvec ones, arma::uword cost);
-RcppExport SEXP eulerr_compute_fit(SEXP parSEXP, SEXP areasSEXP, SEXP idSEXP, SEXP twoSEXP, SEXP twosSEXP, SEXP onesSEXP, SEXP costSEXP) {
-BEGIN_RCPP
-    Rcpp::RObject rcpp_result_gen;
-    Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< arma::vec >::type par(parSEXP);
-    Rcpp::traits::input_parameter< arma::vec >::type areas(areasSEXP);
-    Rcpp::traits::input_parameter< arma::umat >::type id(idSEXP);
-    Rcpp::traits::input_parameter< arma::umat >::type two(twoSEXP);
-    Rcpp::traits::input_parameter< arma::uvec >::type twos(twosSEXP);
-    Rcpp::traits::input_parameter< arma::uvec >::type ones(onesSEXP);
-    Rcpp::traits::input_parameter< arma::uword >::type cost(costSEXP);
-    rcpp_result_gen = Rcpp::wrap(compute_fit(par, areas, id, two, twos, ones, cost));
     return rcpp_result_gen;
 END_RCPP
 }
