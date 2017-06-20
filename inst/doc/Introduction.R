@@ -1,8 +1,3 @@
-## ----venneuler_failure, fig.height=5, fig.width=5, fig.cap='venneuler plot with unwanted overlap.', dev.args=list(type='cairo-png')----
-venn_fit <- venneuler::venneuler(c(A = 75, B = 50, "A&B" = 0))
-par(mar = c(0, 0, 0, 0))
-plot(venn_fit)
-
 ## ----input---------------------------------------------------------------
 library(eulerr)
 
