@@ -1,7 +1,7 @@
 Package: eulerr
 Title: Area-Proportional Euler and Venn Diagrams with Circles or
         Ellipses
-Version: 3.0.0
+Version: 3.0.1
 Authors@R: c(person("Johan", "Larsson", email = "johanlarsson@outlook.com",
                     role = c("aut", "cre")),
              person("A. Jonathan R.", "Godfrey", role = "ctb"))
@@ -22,9 +22,9 @@ URL: https://github.com/jolars/eulerr
 BugReports: https://github.com/jolars/eulerr/issues
 RoxygenNote: 6.0.1
 NeedsCompilation: yes
-Packaged: 2017-11-15 11:03:00 UTC; johan
+Packaged: 2017-11-15 15:29:07 UTC; johan
 Author: Johan Larsson [aut, cre],
   A. Jonathan R. Godfrey [ctb]
 Maintainer: Johan Larsson <johanlarsson@outlook.com>
 Repository: CRAN
-Date/Publication: 2017-11-15 11:20:04 UTC
+Date/Publication: 2017-11-15 21:38:28 UTC
