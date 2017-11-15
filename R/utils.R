@@ -11,12 +11,12 @@ tally_combinations <- function(sets) {
   if (!is.matrix(sets))
     sets <- as.matrix(sets)
 
-  id <- bit_indexr(ncol(sets))
-  tally <- double(nrow(id))
+  id <- bit_indexr(NCOL(sets))
+  tally <- double(NROW(id))
 
-  for (i in 1:nrow(id)) {
+  for (i in 1:NROW(id)) {
     tally[i] <-
-      sum(as.numeric(colSums(t(sets) == id[i, ]) == ncol(sets)) * weights)
+      sum(as.numeric(colSums(t(sets) == id[i, ]) == NCOL(sets))*weights)
     names(tally)[i] <- paste0(colnames(sets)[id[i, ]], collapse = "&")
   }
 
@@ -32,25 +32,7 @@ tally_combinations <- function(sets) {
 #' @return Rescaled vector
 #' @keywords internal
 rescale <- function(x, new_min, new_max) {
-  (new_max - new_min) / (max(x) - min(x)) * (x - max(x)) + new_max
-}
-
-#' Center Circles
-#'
-#' @param pars A matrix or data.frame of x coordinates, y coordinates, and
-#'   radii.
-#'
-#' @return A centered version of `pars`.
-#' @keywords internal
-center_circles <- function(pars) {
-  x <- pars[, 1L]
-  y <- pars[, 2L]
-  r <- pars[, 3L]
-  xlim <- range(c(x + r, x - r))
-  ylim <- range(c(y + r, y - r))
-  pars[, 1L] <- x + abs(xlim[1L] - xlim[2L]) / 2L - xlim[2L]
-  pars[, 2L] <- y + abs(ylim[1L] - ylim[2L]) / 2L - ylim[2L]
-  pars
+  (new_max - new_min)/(max(x) - min(x))*(x - max(x)) + new_max
 }
 
 #' Update a List with User Input
@@ -70,7 +52,7 @@ update_list <- function(x, val) {
     tryCatch(val <- as.list(val))
   if (!is.list(x))
     tryCatch(x <- as.list(x))
-  modifyList(x, val)
+  utils::modifyList(x, val)
 }
 
 #' Suppress Plotting
@@ -83,9 +65,9 @@ update_list <- function(x, val) {
 #' @keywords internal
 dont_plot <- function(x, ...) {
   tmp <- tempfile()
-  png(tmp)
-  p <- plot(x, ...)
-  dev.off()
+  grDevices::png(tmp)
+  p <- graphics::plot(x, ...)
+  grDevices::dev.off()
   unlink(tmp)
   invisible(p)
 }
@@ -98,7 +80,7 @@ dont_plot <- function(x, ...) {
 #' @return Nothing, which is the point.
 #' @keywords internal
 dont_print <- function(x, ...) {
-  capture.output(y <- print(x, ...))
+  utils::capture.output(y <- print(x, ...))
   invisible(y)
 }
 
@@ -115,7 +97,7 @@ dont_print <- function(x, ...) {
 #' @return A string of hex colors
 #' @keywords internal
 qualpalr_pal <- function(n) {
-  palettes[[n]]
+  palette[1L:n]
 }
 
 #' Check If Object Is Strictly FALSE
@@ -125,5 +107,102 @@ qualpalr_pal <- function(n) {
 #' @return Logical.
 #' @keywords internal
 is_false <- function(x) {
-  is.logical(x) && !isTRUE(x)
+  identical(x, FALSE)
+}
+
+#' Binary indices
+#'
+#' Wraps around bit_indexr().
+#'
+#' @param n Number of items to generate permutations from.
+#'
+#' @return A matrix of logicals
+#' @keywords internal
+bit_indexr <- function(n) {
+  m <- bit_index_cpp(n)
+  mode(m) <- "logical"
+  m
+}
+
+#' regionError
+#'
+#' @param fit Fitted values
+#' @param orig Original values
+#'
+#' @return regionError
+#' @export
+#' @keywords internal
+regionError <- function(fit, orig) {
+  abs(fit/sum(fit) - orig/sum(orig))
+}
+
+#' diagError
+#'
+#' @param fit Fitted values
+#' @param orig Original values
+#' @param regionError regionError
+#'
+#' @return diagError
+#' @export
+#' @keywords internal
+diagError <- function(fit, orig, regionError = NULL) {
+  if(!is.null(regionError)) {
+    max(regionError)
+  } else {
+    max(abs(fit/sum(fit) - orig/sum(orig)))
+  }
+}
+
+#' Get the number of sets in he input
+#'
+#' @param combinations A vector of combinations (see [euler()]).
+#'
+#' @return The number of sets in the input
+#' @export
+#' @keywords internal
+n_sets <- function(combinations) {
+  combo_names <- strsplit(names(combinations), split = "&", fixed = TRUE)
+  length(unique(unlist(combo_names, use.names = FALSE)))
+}
+
+
+#' Set up constraints for optimization
+#'
+#' @param newpars Parameters from the first optimizer.
+#'
+#' @return A list of lower and upper constraints
+#' @export
+#' @keywords internal
+get_constraints <- function(newpars) {
+  h   <- newpars[, 1L]
+  k   <- newpars[, 2L]
+  a   <- newpars[, 3L]
+  b   <- newpars[, 4L]
+  phi <- newpars[, 5L]
+
+  n <- length(h)
+
+  xlim <- sqrt(a^2*cos(phi)^2 + b^2*sin(phi)^2)
+  ylim <- sqrt(a^2*sin(phi)^2 + b^2*cos(phi)^2)
+  xbnd <- range(xlim + h, -xlim + h)
+  ybnd <- range(ylim + k, -ylim + k)
+
+  lwr <- upr <- double(5L*n)
+
+  for (i in seq_along(h)) {
+    ii <- 5L*(i - 1L)
+
+    lwr[ii + 1L] <- xbnd[1L]
+    lwr[ii + 2L] <- ybnd[1L]
+    lwr[ii + 3L] <- a[i]/4
+    lwr[ii + 4L] <- b[i]/4
+    lwr[ii + 5L] <- -pi
+
+    upr[ii + 1L] <- xbnd[2L]
+    upr[ii + 2L] <- ybnd[2L]
+    upr[ii + 3L] <- a[i]*4
+    upr[ii + 4L] <- b[i]*4
+    upr[ii + 5L] <- pi
+  }
+  list(lwr = lwr, upr = upr)
 }

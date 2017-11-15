@@ -1,0 +1,266 @@
+#' Skyline packing algorithm
+#'
+#' @param m A matrix of vertices for the rectangles.
+#'
+#' @return A matrix with updated vertices for the rectangles.
+#'
+#' @keywords internal
+skyline_pack <- function(m) {
+  # TODO: Add rotation to boxes as well.
+  # TODO: Port to c++
+
+  n <- NCOL(m)
+  w <- m[2L, ] - m[1L, ]
+  h <- m[4L, ] - m[3L, ]
+  sizes <- h*w
+
+  # Add some padding for the rectangles
+  #padding <- 1.6*sqrt(sum(sizes))*0.015
+  padding <- sum(w, na.rm = TRUE)*0.8*0.015
+
+  # Pick a maximum bin width. Make sure the largest rectangle fits.
+  #bin_w <- max(1.6*sqrt(sum(sizes)), w + padding)
+  bin_w <- max(sum(w, na.rm = TRUE)*0.8,
+               sum(w[order(w, decreasing = TRUE)][1:2] + 2*padding),
+               w + padding)
+
+  w <- w + padding
+  h <- h + padding
+
+  tol <- sqrt(.Machine$double.eps)
+
+  m[] <- 0
+
+  # Initialize the skyline
+  skyline <- matrix(c(0, 0, bin_w, 0), ncol = 2)
+
+  for (i in 1L:n) {
+    # Order the points by y coordinate
+    ord <- order(skyline[2L, ])
+
+    # Start by examining the lowest rooftop on the skyline
+    k <- 0L
+
+    looking <- TRUE
+    while (looking) {
+      j <- which(ord == (1L + 2L*k) | ord == (2L + 2L*k))[1L]
+
+      p1 <- ord[ord == j]
+      p2 <- ord[ord == j + 1L]
+
+      left  <- skyline[2L, 1L:p1] - skyline[2L, p1] > tol
+      right <- skyline[2L, p2:NCOL(skyline)] - skyline[2L, p2] > tol
+
+      if (any(left)) {
+        # There is a taller rooftop on the skyline to the left
+        next_left <- which(left)[sum(left)]
+      } else {
+        next_left <- 1L
+      }
+
+      if (any(right)) {
+        # There is a taller rooftop on the skyline to the right
+        next_right <- which(right)[1L]
+      } else {
+        next_right <- NCOL(skyline)
+      }
+
+      if (w[i] <= skyline[1L, next_right] - skyline[1L, next_left]) {
+        # Build a new building on the skyline
+        m[1L, i] <- skyline[1L, next_left]
+        m[2L, i] <- skyline[1L, next_left] + w[i]
+        m[3L, i] <- skyline[2L, p1]
+        m[4L, i] <- skyline[2L, p2] + h[i]
+
+        l <- if (next_left == 1) 0 else 1
+
+        skyline[2L, next_left + l] <- skyline[2L, p1] + h[i]
+
+        newcols <-
+          rbind(c(skyline[1L, next_left] + w[i], skyline[1L, next_left] + w[i]),
+                c(skyline[2L, p2] + h[i], skyline[2L, p2]))
+
+        skyline <- cbind(skyline[, seq(1L, next_left + l), drop = FALSE],
+                         newcols,
+                         skyline[, seq(p2, NCOL(skyline)), drop = FALSE])
+
+        # Check if there are any rooftops on the skyline beneath the new one
+        underneath <- skyline[1L, ] > m[1L, i] & skyline[1L, ] < m[2L, i]
+
+        if (any(underneath)) {
+          # Drop down to the lowest level
+          skyline[2L, which(underneath)[1L] - 1L] <-
+            skyline[2L, which(underneath)[sum(underneath)]]
+          skyline <- skyline[, !underneath, drop = FALSE]
+        }
+
+        looking <- FALSE
+      } else {
+        # Examine the next rooftop
+        k <- k + 1L
+      }
+    }
+  }
+  m
+}
+
+#' Shelf packing algorithm for packing rectangles in a bin.
+#'
+#' @param m A matrix of vertices for the rectangles.
+#'
+#' @return A list with new vertices and the new order of the rectangles.
+#'
+#' @keywords internal
+shelf_pack <- function(m) {
+  # TODO(jlarsson): Introduce a better algorithm to do this, such as skyline.
+  # TODO(jlarsson): Port to c++
+  n <- ncol(m)
+  w <- (m[2L, ] - m[1L, ])
+  h <- (m[4L, ] - m[3L, ])
+  sizes <- h*w
+
+  # Pick a maximum bin width. Make sure the largest rectangle fits.
+
+  padding <- min(h, w)*0.05
+  bin_w <- max(1.3*sqrt(sum(sizes)), w + padding)
+
+  ord <- order(h, decreasing = TRUE)
+
+  w <- w[ord] + padding
+  h <- h[ord] + padding
+
+  shelf_w <- rep.int(bin_w, n) # remaining shelf width
+  shelf_h <- rep.int(0, n) # shelf heights
+
+  x0 <- double(n)
+  x1 <- double(n)
+  y0 <- double(n)
+  y1 <- double(n)
+
+  hcurr <- h[1]
+
+  for (i in seq_along(sizes)) {
+    j <- 1L
+    repeat {
+      if (shelf_w[j] - w[i] < 0) {
+        j <- j + 1L
+        if (shelf_h[j] == 0) {
+          shelf_h[j] <- shelf_h[j - 1L] + hcurr
+          hcurr <- h[i]
+        }
+      } else {
+        x0[i] <- bin_w - shelf_w[j]
+        x1[i] <- x0[i] + w[i]
+        y0[i] <- shelf_h[j]
+        y1[i] <- y0[i] + h[i]
+
+        shelf_w[j] <- shelf_w[j] - w[i]
+        break;
+      }
+    }
+  }
+  return(list(xy = rbind(x0, x1, y0, y1), ord = ord))
+}
+
+#' Compress a Euler Layout
+#'
+#' @param fpar A Euler layout fit with [euler()]
+#' @param id The binary index of sets.
+#'
+#' @return A modified fpar object.
+#' @keywords internal
+compress_layout <- function(fpar, id, fit) {
+  # TODO: Port to c++
+  n <- NCOL(id)
+
+  clusters <- matrix(NA, nrow = n, ncol = n)
+
+  for (i in 1:n) {
+    for (j in 1:n) {
+      clusters[i, j] <- any(id[, i] & id[, j] & fit > 0)
+    }
+  }
+
+  for (i in 1:n) {
+    for (j in 1:n) {
+      if (any(clusters[i, ] & clusters[j, ])) {
+        clusters[i, ] <- clusters[j, ] <- clusters[i, ] | clusters[j, ]
+      }
+    }
+  }
+
+  unique_clusters <- unique(lapply(split(clusters, row(clusters)), which))
+
+  # Drop clusters that contain no elements (usually shapes without area)
+  unique_clusters <- unique_clusters[lengths(unique_clusters) > 0L]
+  n_clusters <- length(unique_clusters)
+
+  if (n_clusters > 1) {
+    bounds <- matrix(NA, ncol = n_clusters, nrow = 4L)
+
+    for (i in seq_along(unique_clusters)) {
+      ii <- unique_clusters[[i]]
+      h <- fpar[ii, 1L]
+      k <- fpar[ii, 2L]
+      if (NCOL(fpar) == 3L) {
+        a <- b <- fpar[ii, 3L]
+        phi <- 0
+      } else {
+        a <- fpar[ii, 3L]
+        b <- fpar[ii, 4L]
+        phi <- fpar[ii, 5L]
+      }
+
+      limits <- get_bounding_box(h, k, a, b, phi)
+
+      bounds[1L:2L, i] <- limits$xlim
+      bounds[3L:4L, i] <- limits$ylim
+    }
+
+    # Skyline pack the bounding rectangles
+    # TODO: Fix occasional errors in computing the bounding boxes.
+    if (all(is.finite(bounds))) {
+      new_bounds <- skyline_pack(bounds)
+
+      for (i in seq_along(unique_clusters)) {
+        ii <- unique_clusters[[i]]
+        fpar[ii, 1L] <- fpar[ii, 1L] - (bounds[1L, i] - new_bounds[1L, i])
+        fpar[ii, 2L] <- fpar[ii, 2L] - (bounds[3L, i] - new_bounds[3L, i])
+      }
+    }
+  }
+
+  fpar
+}
+
+#' Center Circles
+#'
+#' @param pars A matrix or data.frame of x coordinates, y coordinates, minor
+#'   radius (a) and major radius (b).
+#'
+#' @return A centered version of `pars`.
+#' @keywords internal
+center_layout <- function(pars) {
+  x <- pars[, 1L]
+  y <- pars[, 2L]
+
+  if (NCOL(pars) == 3) {
+    # Circles
+    a <- b <- pars[, 3L]
+    phi <- 0
+  } else {
+    # Ellipses
+    a <- pars[, 3L]
+    b <- pars[, 4L]
+    phi <- pars[, ]
+  }
+
+  cphi <- cos(phi)
+  sphi <- sin(phi)
+  xlim <- range(c(x + a*cphi, x + b*cphi, x - a*cphi, x - b*cphi))
+  ylim <- range(c(y + a*sphi, y + b*sphi, y - a*sphi, y - b*sphi))
+
+  pars[, 1L] <- x + abs(xlim[1L] - xlim[2L])/2 - xlim[2L]
+  pars[, 2L] <- y + abs(ylim[1L] - ylim[2L])/2 - ylim[2L]
+  pars
+}

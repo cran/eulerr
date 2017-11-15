@@ -1,5 +1,5 @@
-# The following functions have been imported ad verbatim from lattice
-# version 0.20-35 and come with the following copyright notice attached.
+# The following functions have been imported from lattice version 0.20-35, which
+# came with the following copyright notice attached.
 
 ### Copyright (C) 2001-2006  Deepayan Sarkar <Deepayan.Sarkar@R-project.org>
 ###
@@ -20,11 +20,11 @@
 ### MA 02110-1301, USA
 
 primName <- function(name, identifier = NULL, name.type = "panel", group = 0) {
-  trellis.grobname(name = ifelse(is.null(identifier),
-                                 name,
-                                 paste(identifier, name, sep = ".")),
-                   type = name.type,
-                   group = group)
+  lattice::trellis.grobname(name = ifelse(is.null(identifier),
+                                          name,
+                                          paste(identifier, name, sep = ".")),
+                            type = name.type,
+                            group = group)
 }
 
 hasGroupNumber <- function() {

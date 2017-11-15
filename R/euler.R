@@ -1,8 +1,8 @@
 #' Area-Proportional Euler Diagrams
 #'
-#' Fit euler diagrams (a generalization of venn diagrams) using numerical
+#' Fit Euler diagrams (a generalization of Venn diagrams) using numerical
 #' optimization to find exact or approximate solutions to a specification of set
-#' relationships.
+#' relationships. The shape of the diagram may be a circle or an ellipse.
 #'
 #' If the input is a matrix or data frame and argument `by` is specified,
 #' the function returns a list of euler diagrams.
@@ -29,16 +29,16 @@
 #' regression of the fitted areas on the original areas that are currently being
 #' explored.
 #'
-#' `euler()` also returns `diag_error` and `region_error` from
-#' *eulerAPE*. `region_error` is computed as
+#' `euler()` also returns `diagError` and `regionError` from
+#' *eulerAPE*. `regionError` is computed as
 #'
 #' \deqn{
 #'     \left| \frac{y_i}{\sum y_i} - \frac{\hat{y}_i}{\sum \hat{y}_i}\right|.
 #'   }{
 #'     max|fit / \sum fit  - original / \sum original|.
-#'   }
+#'  }
 #'
-#' `diag_error` is simply the maximum of region_error.
+#' `diagError` is simply the maximum of regionError.
 #'
 #' @param combinations Set relationships as a named numeric vector, matrix, or
 #'   data.frame. (See the methods (by class) section for details.)
@@ -46,15 +46,29 @@
 #'   split the data.frame or matrix of set combinations.
 #' @param input The type of input: disjoint class combinations
 #'   (`disjoint`) or unions (`union`).
+#' @param shape The geometric shape used in the diagram: `circle` or `ellipse`.
+#' @param control A list of control parameters.
+#'   * `extraopt`: Should the more thorough optimizer (currently
+#'   [GenSA::GenSA()]) kick in (provided `extraopt_threshold` is exceeded)? The
+#'   default is `TRUE` for ellipses and three sets and `FALSE` otherwise.
+#'   * `extraopt_threshold`: The threshold, in terms of `diagError`, for when
+#'   the extra optimizer kicks in. This will almost always slow down the
+#'   process considerably. A value of 0 means
+#'   that the extra optimizer will kick in if there is *any* error. A value of
+#'   1 means that it will never kick in. The default is `0.001`.
+#'   * `extraopt_control`: A list of control parameters to pass to the
+#'   extra optimizer, such as `max.call`. See [GenSA::GenSA()].
 #' @param ... Arguments passed down to other methods.
 #'
-#' @return A list object of class 'euler' with the following parameters.
-#'   \item{coefficients}{A matrix of x and y coordinates for the centers of the
-#'     circles and their radii.}
+#' @return A list object of class `'euler'` with the following parameters.
+#'   \item{coefficients}{A matrix of `h` and `k` (x and y-coordinates for the
+#'     centers of the
+#'     shapes) and, for circles, `r` for radii or, for ellipses, semiaxes `a`
+#'     and `b` and rotation angle `phi`.}
 #'   \item{original.values}{Set relationships provided by the user.}
 #'   \item{fitted.values}{Set relationships in the solution.}
 #'   \item{residuals}{Residuals.}
-#'   \item{diag_error}{The largest absolute residual in percentage points
+#'   \item{diagError}{The largest absolute residual in percentage points
 #'     between the original and fitted areas.}
 #'   \item{stress}{The stress of the solution, computed as the sum of squared
 #'     residuals over the total sum of squares.}
@@ -100,7 +114,7 @@
 #'
 #' @references Wilkinson L. Exact and Approximate Area-Proportional Circular
 #'   Venn and Euler Diagrams. IEEE Transactions on Visualization and Computer
-#'   Graphics (Internet). 2012 Feb (cited 2016 Apr 9);18(2):321–31. Available
+#'   Graphics (Internet). 2012 Feb (cited 2016 Apr 9);18(2):321-31. Available
 #'   from:
 #'   [http://doi.org/10.1109/TVCG.2011.56](http://doi.org/10.1109/TVCG.2011.56)
 #'
@@ -116,23 +130,35 @@ euler <- function(combinations, ...) UseMethod("euler")
 #'   Missing combinations are treated as being 0.
 #'
 #' @export
-euler.default <- function(combinations, input = c("disjoint", "union"), ...) {
-  # Assertions
-  assert_that(is.numeric(combinations),
-              not_empty(combinations),
-              all(combinations >= 0),
-              has_attr(combinations, "names"),
-              !any(names(combinations) == ""),
-              !any(duplicated(names(combinations))))
+euler.default <- function(
+  combinations,
+  input = c("disjoint", "union"),
+  shape = c("circle", "ellipse"),
+  control = list(),
+  ...
+) {
+  stopifnot(is.numeric(combinations),
+            !any(combinations < 0),
+            !is.null(attr(combinations, "names")),
+            !any(names(combinations) == ""),
+            !any(duplicated(names(combinations))))
 
   combo_names <- strsplit(names(combinations), split = "&", fixed = TRUE)
   setnames <- unique(unlist(combo_names, use.names = FALSE))
 
   n <- length(setnames)
   id <- bit_indexr(n)
+  N <- NROW(id)
+  n_restarts <- 10L # should this be made an argument?
 
-  areas <- double(nrow(id))
-  for (i in 1:nrow(id)) {
+  control <- utils::modifyList(
+    list(extraopt = n == 3 && match.arg(shape) == "ellipse",
+         extraopt_threshold = 0.001,
+         extraopt_control = list()),
+    control)
+
+  areas <- double(N)
+  for (i in 1L:N) {
     s <- setnames[id[i, ]]
     for (j in seq_along(combo_names)) {
       if (setequal(s, combo_names[[j]])) {
@@ -141,7 +167,7 @@ euler.default <- function(combinations, input = c("disjoint", "union"), ...) {
     }
   }
 
-  if (n > 1) {
+  if (n > 1L) {
     # Decompose or collect set volumes depending on input
     if (match.arg(input) == "disjoint") {
       areas_disjoint <- areas
@@ -161,65 +187,170 @@ euler.default <- function(combinations, input = c("disjoint", "union"), ...) {
     }
 
     id_sums <- rowSums(id)
-    ones <- id_sums == 1
-    twos <- id_sums == 2
-    two <- choose_two(1:n)
-    r <- sqrt(areas[ones] / pi)
+    ones <- id_sums == 1L
+    twos <- id_sums == 2L
+    two <- choose_two(1L:n)
+    r <- sqrt(areas[ones]/pi)
 
-    # Establish identities of disjoint and contained sets
-    disjoint <- areas[twos] == 0
-    tmp <- matrix(areas[ones][two], ncol = 2)
-    contained <- areas[twos] == tmp[, 1] | areas[twos] == tmp[, 2]
+    # Establish identities of disjoint and subset sets
+    subset <- disjoint <- matrix(FALSE, ncol = n, nrow = n)
+    distances <- area_mat <- matrix(0, ncol = n, nrow = n)
 
-    distances <- mapply(separate_two_discs,
-                        r1 = r[two[, 1]],
-                        r2 = r[two[, 2]],
-                        overlap = areas[twos],
-                        USE.NAMES = FALSE)
+    lwrtri <- lower.tri(subset)
+
+    tmp <- matrix(areas[ones][two], ncol = 2L)
+
+    subset[lwrtri] <- areas[twos] == tmp[, 1L] | areas[twos] == tmp[, 2L]
+    disjoint[lwrtri] <- areas[twos] == 0
+    distances[lwrtri] <- mapply(separate_two_discs,
+                                r1 = r[two[, 1L]],
+                                r2 = r[two[, 2L]],
+                                overlap = areas[twos],
+                                USE.NAMES = FALSE)
 
     # Starting layout
-    initial_layout <- optim(
-      par = runif(n * 2L, 0L, sqrt(sum(r ^ 2L * pi))),
-      fn = initial_layout_optimizer,
-      gr = initial_layout_gradient,
-      distances = distances,
-      disjoint = disjoint,
-      contained = contained,
-      two = two,
-      lower = 0L,
-      upper = sqrt(sum(r ^ 2L * pi)),
-      method = c("L-BFGS-B")
-    )
+    loss <- Inf
+    initial_layouts <- vector("list", n_restarts)
+    bnd <- sqrt(sum(r^2*pi))
+
+    i <- 1L
+    while (loss > 1e-20 && i <= n_restarts) {
+      initial_layouts[[i]] <- stats::nlminb(
+        start = stats::runif(n*2, 0, bnd),
+        objective = optim_init_loss,
+        gradient = optim_init_grad,
+        hessian = optim_init_hess,
+        d = distances,
+        disjoint = disjoint,
+        subset = subset,
+        control = list(abs.tol = 1e-20),
+        lower = rep.int(0, 3L),
+        upper = rep.int(bnd, 3L)
+      )
+      loss <- initial_layouts[[i]]$objective
+      i <- i + 1L
+    }
+
+    # Find the best initial layout
+    best_init <- which.min(lapply(initial_layouts[1L:(i - 1L)],
+                                  "[[",
+                                  "objective"))
+    initial_layout <- initial_layouts[[best_init]]
 
     # Final layout
-    # TO DO: Allow user customization here?
-    final_layout <- nlm(f = loss_final,
-                        p = c(initial_layout$par, r),
-                        areas = areas_disjoint)
+    circle <- match.arg(shape) == "circle"
 
-    fit <- as.vector(return_intersections(final_layout$estimate))
+    if (circle) {
+      pars <- as.vector(matrix(c(initial_layout$par, r), 3L, byrow = TRUE))
+      lwr <- rep.int(0, 3L)
+      upr <- c(bnd, bnd, bnd)
+    } else {
+      pars <- as.vector(rbind(matrix(initial_layout$par, 2L, byrow = TRUE),
+                              r, r, 0, deparse.level = 0L))
+      lwr <- c(rep.int(0, 4L), -pi)
+      upr <- c(rep.int(bnd, 4L), pi)
+    }
 
     orig <- areas_disjoint
 
+    # Try to find a solution using nlm() first (faster)
+    # TODO: Allow user options here?
+    nlminb_solution <- stats::nlminb(
+      start = pars,
+      objective = optim_final_loss,
+      areas = areas_disjoint,
+      circles = circle,
+      control = list(eval.max = 1500,
+                     iter.max = 1000,
+                     abs.tol = 1e-20),
+      lower = lwr,
+      upper = upr
+    )$par
+
+    nlminb_fit <- as.vector(intersect_ellipses(nlminb_solution, circle))
+    nlminb_diagError <- diagError(nlminb_fit, orig)
+
+    # If inadequate solution, try with GenSA (slower, better)
+    if (control$extraopt && nlminb_diagError > control$extraopt_threshold) {
+      # Set bounds for the parameters
+      newpars <- matrix(
+        data = nlminb_solution,
+        ncol = 5L,
+        dimnames = list(setnames, c("h", "k", "a", "b", "phi")),
+        byrow = TRUE
+      )
+
+      newpars <- compress_layout(newpars, id, nlminb_fit)
+      constraints <- get_constraints(newpars)
+
+      GenSA_solution <- GenSA::GenSA(
+        par = as.vector(newpars),
+        fn = optim_final_loss,
+        lower = constraints$lwr,
+        upper = constraints$upr,
+        circles = circle,
+        areas = areas_disjoint,
+        control = utils::modifyList(
+          list(threshold.stop = 1e-20,
+               max.call = 5e3*3L^n),
+          control$extraopt_control
+        )
+      )$par
+
+      GenSA_fit <- as.vector(intersect_ellipses(GenSA_solution, circle))
+      GenSA_diagError <- diagError(GenSA_fit, orig)
+
+      # Check for the best solution
+      if (GenSA_diagError < nlminb_diagError) {
+        final_par <- GenSA_solution
+        fit <- GenSA_fit
+      } else {
+        final_par <- nlminb_solution
+        fit <- nlminb_fit
+      }
+    } else {
+      final_par <- nlminb_solution
+      fit <- nlminb_fit
+    }
+
     names(orig) <- names(fit) <-
-      apply(id, 1, function(x) paste0(setnames[x], collapse = "&"))
+      apply(id, 1L, function(x) paste0(setnames[x], collapse = "&"))
 
-    region_error <- abs(fit / sum(fit) - orig / sum(orig))
-    diag_error <- max(region_error)
+    regionError <- regionError(fit, orig)
+    diagError <- diagError(regionError = regionError)
+    stress <- stress(orig, fit)
 
-    fpar <- matrix(final_layout$estimate,
-                   ncol = 3,
-                   dimnames = list(setnames, c("x", "y", "r")))
-    stress <- venneuler_stress(orig, fit)
+    fpar <- matrix(
+      data = final_par,
+      ncol = if (circle) 3L else 5L,
+      dimnames = list(
+        setnames,
+        if (circle) c("h", "k", "r") else c("h", "k", "a", "b", "phi")
+      ),
+      byrow = TRUE
+    )
+
+    # Find disjoint clusters and compress the layout
+    fpar <- compress_layout(fpar, id, fit)
 
     # Center the solution on the coordinate plane
-    fpar <- center_circles(fpar)
+    fpar <- center_layout(fpar)
   } else {
-    # Just one circle
-    fpar <-  matrix(c(0, 0, sqrt(areas / pi)),
-                    ncol = 3,
-                    dimnames = list(setnames, c("x", "y", "r")))
-    region_error <- diag_error <- stress <- 0
+    circle <- match.arg(shape) == "circle"
+    # One set
+    fpar <- matrix(
+      data = if (circle)
+        c(0, 0, sqrt(areas/pi))
+      else
+        c(0, 0, sqrt(areas/pi), sqrt(areas/pi), 0),
+      ncol = if (circle) 3L else 5L,
+      dimnames = list(
+        setnames,
+        if (circle) c("h", "k", "r") else c("h", "k", "a", "b", "phi")
+      ),
+      byrow = TRUE
+    )
+    regionError <- diagError <- stress <- 0
     orig <- fit <- areas
     names(orig) <- names(fit) <- setnames
   }
@@ -229,8 +360,8 @@ euler.default <- function(combinations, input = c("disjoint", "union"), ...) {
                  original.values = orig,
                  fitted.values = fit,
                  residuals = orig - fit,
-                 region_error = region_error,
-                 diag_error = diag_error,
+                 regionError = regionError,
+                 diagError = diagError,
                  stress = stress),
             class = c("euler", "list"))
 }
@@ -240,20 +371,22 @@ euler.default <- function(combinations, input = c("disjoint", "union"), ...) {
 #'   the number of rows in `combinations`.
 #' @export
 euler.data.frame <- function(combinations, weights = NULL, by = NULL, ...) {
-  assert_that(!any(grepl("&", colnames(combinations), fixed = TRUE)))
+  stopifnot(!any(grepl("&", colnames(combinations), fixed = TRUE)))
 
   if (is.null(weights))
-    weights <- rep.int(1, NROW(combinations))
+    weights <- rep.int(1L, nrow(combinations))
+
   if (!is.null(by)) {
-    vapply(by,
-           function(x) assert_that(is.factor(x) || is.character(x)),
-           FUN.VALUE = logical(1))
+    stopifnot(all(vapply(by,
+                         function(x) (is.factor(x) || is.character(x)),
+                         FUN.VALUE = logical(1))))
     if (NCOL(by) > 2L)
       stop("No more than two conditioning variables are allowed.")
   }
 
-  out <- matrix(NA, nrow = NROW(combinations), ncol = NCOL(combinations))
+  out <- matrix(NA, nrow = nrow(combinations), ncol = ncol(combinations))
   colnames(out) <- colnames(combinations)
+
   for (i in seq_along(combinations)) {
     y <- combinations[, i]
     if (is.factor(y) || is.character(y)) {
@@ -302,14 +435,14 @@ euler.table <- function(combinations, ...) {
   euler(x[, !(names(x) == "Freq")], weights = x$Freq, ...)
 }
 
-
 #' @describeIn euler A list of vectors, each vector giving the contents of
-#'   that set. Vectors in the list do not need to be named.
+#'   that set (with no duplicates). Vectors in the list do not need to be named.
 #' @export
 euler.list <- function(combinations, ...) {
-  assert_that(has_attr(combinations, "names"),
-              !any(names(combinations) == ""),
-              !any(duplicated(names(combinations))))
+  stopifnot(!is.null(attr(combinations, "names")),
+            !any(names(combinations) == ""),
+            !any(duplicated(names(combinations))),
+            all(sapply(combinations, anyDuplicated) == 0))
 
   sets <- names(combinations)
   n <- length(sets)
@@ -319,20 +452,8 @@ euler.list <- function(combinations, ...) {
   out <- integer(nrow(id))
   names(out) <- apply(id, 1L, function(x) paste(sets[x], collapse = "&"))
 
-  for (i in 1:nrow(id))
+  for (i in 1L:nrow(id))
     out[i] <- length(Reduce(intersect, combinations[id[i, ]]))
 
   euler(out, input = "union")
-}
-
-#' Area-Proportional Euler Diagrams (defunct)
-#'
-#' *Note: This function is defunct; please use [euler()] instead.*
-#'
-#' @param ... Ignored
-#'
-#' @export
-
-eulerr <- function(...) {
-  .Defunct("euler")
 }

@@ -6,112 +6,149 @@
 
 using namespace Rcpp;
 
-// bit_indexr
-LogicalMatrix bit_indexr(arma::uword n);
-RcppExport SEXP eulerr_bit_indexr(SEXP nSEXP) {
+// intersect_ellipses
+arma::vec intersect_ellipses(const arma::vec& par, const bool circles);
+RcppExport SEXP _eulerr_intersect_ellipses(SEXP parSEXP, SEXP circlesSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< arma::uword >::type n(nSEXP);
-    rcpp_result_gen = Rcpp::wrap(bit_indexr(n));
+    Rcpp::traits::input_parameter< const arma::vec& >::type par(parSEXP);
+    Rcpp::traits::input_parameter< const bool >::type circles(circlesSEXP);
+    rcpp_result_gen = Rcpp::wrap(intersect_ellipses(par, circles));
     return rcpp_result_gen;
 END_RCPP
 }
-// return_intersections
-arma::vec return_intersections(arma::vec par);
-RcppExport SEXP eulerr_return_intersections(SEXP parSEXP) {
+// optim_final_loss
+double optim_final_loss(const arma::vec& par, const arma::vec& areas, const bool circles);
+RcppExport SEXP _eulerr_optim_final_loss(SEXP parSEXP, SEXP areasSEXP, SEXP circlesSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< arma::vec >::type par(parSEXP);
-    rcpp_result_gen = Rcpp::wrap(return_intersections(par));
+    Rcpp::traits::input_parameter< const arma::vec& >::type par(parSEXP);
+    Rcpp::traits::input_parameter< const arma::vec& >::type areas(areasSEXP);
+    Rcpp::traits::input_parameter< const bool >::type circles(circlesSEXP);
+    rcpp_result_gen = Rcpp::wrap(optim_final_loss(par, areas, circles));
     return rcpp_result_gen;
 END_RCPP
 }
-// venneuler_stress
-double venneuler_stress(arma::vec& areas, arma::vec& fit);
-RcppExport SEXP eulerr_venneuler_stress(SEXP areasSEXP, SEXP fitSEXP) {
+// optim_init_loss
+double optim_init_loss(const Rcpp::NumericVector& par, const Rcpp::NumericMatrix& d, const Rcpp::LogicalMatrix& disjoint, const Rcpp::LogicalMatrix& subset);
+RcppExport SEXP _eulerr_optim_init_loss(SEXP parSEXP, SEXP dSEXP, SEXP disjointSEXP, SEXP subsetSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< arma::vec& >::type areas(areasSEXP);
-    Rcpp::traits::input_parameter< arma::vec& >::type fit(fitSEXP);
-    rcpp_result_gen = Rcpp::wrap(venneuler_stress(areas, fit));
+    Rcpp::traits::input_parameter< const Rcpp::NumericVector& >::type par(parSEXP);
+    Rcpp::traits::input_parameter< const Rcpp::NumericMatrix& >::type d(dSEXP);
+    Rcpp::traits::input_parameter< const Rcpp::LogicalMatrix& >::type disjoint(disjointSEXP);
+    Rcpp::traits::input_parameter< const Rcpp::LogicalMatrix& >::type subset(subsetSEXP);
+    rcpp_result_gen = Rcpp::wrap(optim_init_loss(par, d, disjoint, subset));
     return rcpp_result_gen;
 END_RCPP
 }
-// loss_final
-double loss_final(arma::vec par, arma::vec areas);
-RcppExport SEXP eulerr_loss_final(SEXP parSEXP, SEXP areasSEXP) {
+// optim_init_grad
+Rcpp::NumericVector optim_init_grad(const Rcpp::NumericVector& par, const Rcpp::NumericMatrix& d, const Rcpp::LogicalMatrix& disjoint, const Rcpp::LogicalMatrix& subset);
+RcppExport SEXP _eulerr_optim_init_grad(SEXP parSEXP, SEXP dSEXP, SEXP disjointSEXP, SEXP subsetSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< arma::vec >::type par(parSEXP);
-    Rcpp::traits::input_parameter< arma::vec >::type areas(areasSEXP);
-    rcpp_result_gen = Rcpp::wrap(loss_final(par, areas));
+    Rcpp::traits::input_parameter< const Rcpp::NumericVector& >::type par(parSEXP);
+    Rcpp::traits::input_parameter< const Rcpp::NumericMatrix& >::type d(dSEXP);
+    Rcpp::traits::input_parameter< const Rcpp::LogicalMatrix& >::type disjoint(disjointSEXP);
+    Rcpp::traits::input_parameter< const Rcpp::LogicalMatrix& >::type subset(subsetSEXP);
+    rcpp_result_gen = Rcpp::wrap(optim_init_grad(par, d, disjoint, subset));
+    return rcpp_result_gen;
+END_RCPP
+}
+// optim_init_hess
+Rcpp::NumericMatrix optim_init_hess(const Rcpp::NumericVector& par, const Rcpp::NumericMatrix& d, const Rcpp::LogicalMatrix& disjoint, const Rcpp::LogicalMatrix& subset);
+RcppExport SEXP _eulerr_optim_init_hess(SEXP parSEXP, SEXP dSEXP, SEXP disjointSEXP, SEXP subsetSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< const Rcpp::NumericVector& >::type par(parSEXP);
+    Rcpp::traits::input_parameter< const Rcpp::NumericMatrix& >::type d(dSEXP);
+    Rcpp::traits::input_parameter< const Rcpp::LogicalMatrix& >::type disjoint(disjointSEXP);
+    Rcpp::traits::input_parameter< const Rcpp::LogicalMatrix& >::type subset(subsetSEXP);
+    rcpp_result_gen = Rcpp::wrap(optim_init_hess(par, d, disjoint, subset));
+    return rcpp_result_gen;
+END_RCPP
+}
+// locate_centers
+arma::mat locate_centers(const arma::rowvec& h, const arma::rowvec& k, const arma::rowvec& a, const arma::rowvec& b, const arma::rowvec& phi, const arma::colvec& fitted);
+RcppExport SEXP _eulerr_locate_centers(SEXP hSEXP, SEXP kSEXP, SEXP aSEXP, SEXP bSEXP, SEXP phiSEXP, SEXP fittedSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< const arma::rowvec& >::type h(hSEXP);
+    Rcpp::traits::input_parameter< const arma::rowvec& >::type k(kSEXP);
+    Rcpp::traits::input_parameter< const arma::rowvec& >::type a(aSEXP);
+    Rcpp::traits::input_parameter< const arma::rowvec& >::type b(bSEXP);
+    Rcpp::traits::input_parameter< const arma::rowvec& >::type phi(phiSEXP);
+    Rcpp::traits::input_parameter< const arma::colvec& >::type fitted(fittedSEXP);
+    rcpp_result_gen = Rcpp::wrap(locate_centers(h, k, a, b, phi, fitted));
     return rcpp_result_gen;
 END_RCPP
 }
 // choose_two
-IntegerMatrix choose_two(IntegerVector x);
-RcppExport SEXP eulerr_choose_two(SEXP xSEXP) {
+arma::umat choose_two(const arma::uvec& x);
+RcppExport SEXP _eulerr_choose_two(SEXP xSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< IntegerVector >::type x(xSEXP);
+    Rcpp::traits::input_parameter< const arma::uvec& >::type x(xSEXP);
     rcpp_result_gen = Rcpp::wrap(choose_two(x));
     return rcpp_result_gen;
 END_RCPP
 }
 // discdisc
-NumericVector discdisc(NumericVector r1, NumericVector r2, NumericVector d);
-RcppExport SEXP eulerr_discdisc(SEXP r1SEXP, SEXP r2SEXP, SEXP dSEXP) {
+double discdisc(double d, double r1, double r2, double overlap);
+RcppExport SEXP _eulerr_discdisc(SEXP dSEXP, SEXP r1SEXP, SEXP r2SEXP, SEXP overlapSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< NumericVector >::type r1(r1SEXP);
-    Rcpp::traits::input_parameter< NumericVector >::type r2(r2SEXP);
-    Rcpp::traits::input_parameter< NumericVector >::type d(dSEXP);
-    rcpp_result_gen = Rcpp::wrap(discdisc(r1, r2, d));
+    Rcpp::traits::input_parameter< double >::type d(dSEXP);
+    Rcpp::traits::input_parameter< double >::type r1(r1SEXP);
+    Rcpp::traits::input_parameter< double >::type r2(r2SEXP);
+    Rcpp::traits::input_parameter< double >::type overlap(overlapSEXP);
+    rcpp_result_gen = Rcpp::wrap(discdisc(d, r1, r2, overlap));
     return rcpp_result_gen;
 END_RCPP
 }
-// find_surrounding_sets
-LogicalMatrix find_surrounding_sets(NumericVector xs, NumericVector ys, NumericVector x, NumericVector y, NumericVector r);
-RcppExport SEXP eulerr_find_surrounding_sets(SEXP xsSEXP, SEXP ysSEXP, SEXP xSEXP, SEXP ySEXP, SEXP rSEXP) {
+// stress
+double stress(const arma::vec& areas, const arma::vec& fit);
+RcppExport SEXP _eulerr_stress(SEXP areasSEXP, SEXP fitSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< NumericVector >::type xs(xsSEXP);
-    Rcpp::traits::input_parameter< NumericVector >::type ys(ysSEXP);
-    Rcpp::traits::input_parameter< NumericVector >::type x(xSEXP);
-    Rcpp::traits::input_parameter< NumericVector >::type y(ySEXP);
-    Rcpp::traits::input_parameter< NumericVector >::type r(rSEXP);
-    rcpp_result_gen = Rcpp::wrap(find_surrounding_sets(xs, ys, x, y, r));
+    Rcpp::traits::input_parameter< const arma::vec& >::type areas(areasSEXP);
+    Rcpp::traits::input_parameter< const arma::vec& >::type fit(fitSEXP);
+    rcpp_result_gen = Rcpp::wrap(stress(areas, fit));
     return rcpp_result_gen;
 END_RCPP
 }
-// max_colmins
-arma::uword max_colmins(arma::mat x);
-RcppExport SEXP eulerr_max_colmins(SEXP xSEXP) {
+// bit_index_cpp
+arma::umat bit_index_cpp(arma::uword n);
+RcppExport SEXP _eulerr_bit_index_cpp(SEXP nSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< arma::mat >::type x(xSEXP);
-    rcpp_result_gen = Rcpp::wrap(max_colmins(x));
+    Rcpp::traits::input_parameter< arma::uword >::type n(nSEXP);
+    rcpp_result_gen = Rcpp::wrap(bit_index_cpp(n));
     return rcpp_result_gen;
 END_RCPP
 }
 
 static const R_CallMethodDef CallEntries[] = {
-    {"eulerr_bit_indexr", (DL_FUNC) &eulerr_bit_indexr, 1},
-    {"eulerr_return_intersections", (DL_FUNC) &eulerr_return_intersections, 1},
-    {"eulerr_venneuler_stress", (DL_FUNC) &eulerr_venneuler_stress, 2},
-    {"eulerr_loss_final", (DL_FUNC) &eulerr_loss_final, 2},
-    {"eulerr_choose_two", (DL_FUNC) &eulerr_choose_two, 1},
-    {"eulerr_discdisc", (DL_FUNC) &eulerr_discdisc, 3},
-    {"eulerr_find_surrounding_sets", (DL_FUNC) &eulerr_find_surrounding_sets, 5},
-    {"eulerr_max_colmins", (DL_FUNC) &eulerr_max_colmins, 1},
+    {"_eulerr_intersect_ellipses", (DL_FUNC) &_eulerr_intersect_ellipses, 2},
+    {"_eulerr_optim_final_loss", (DL_FUNC) &_eulerr_optim_final_loss, 3},
+    {"_eulerr_optim_init_loss", (DL_FUNC) &_eulerr_optim_init_loss, 4},
+    {"_eulerr_optim_init_grad", (DL_FUNC) &_eulerr_optim_init_grad, 4},
+    {"_eulerr_optim_init_hess", (DL_FUNC) &_eulerr_optim_init_hess, 4},
+    {"_eulerr_locate_centers", (DL_FUNC) &_eulerr_locate_centers, 6},
+    {"_eulerr_choose_two", (DL_FUNC) &_eulerr_choose_two, 1},
+    {"_eulerr_discdisc", (DL_FUNC) &_eulerr_discdisc, 4},
+    {"_eulerr_stress", (DL_FUNC) &_eulerr_stress, 2},
+    {"_eulerr_bit_index_cpp", (DL_FUNC) &_eulerr_bit_index_cpp, 1},
     {NULL, NULL, 0}
 };
 

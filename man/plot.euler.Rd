@@ -5,10 +5,10 @@
 \title{Plot Area-Proportional Euler Diagrams}
 \usage{
 \method{plot}{euler}(x, fill = qualpalr_pal, fill_alpha = 0.4,
-  auto.key = FALSE, counts = FALSE, labels = is.logical(auto.key) &&
+  auto.key = FALSE, quantities = FALSE, labels = is.logical(auto.key) &&
   !isTRUE(auto.key), fontface = "bold", par.settings = list(), ...,
   default.prepanel = prepanel.euler, default.scales = list(draw = FALSE),
-  panel = panel.euler, outer_strips, fill_opacity)
+  panel = panel.euler, outer_strips, counts)
 }
 \arguments{
 \item{x}{An object of class \code{euler}.}
@@ -20,7 +20,7 @@ the number of colors to generate, or a sequence of colors.}
 
 \item{auto.key}{Plot a legend for the sets.}
 
-\item{counts}{Plot counts.}
+\item{quantities}{Plot quantities.}
 
 \item{labels}{A list or character vector of labels.}
 
@@ -41,7 +41,7 @@ untouched.}
 
 \item{outer_strips}{Deprecated}
 
-\item{fill_opacity}{Deprecated}
+\item{counts}{Deprecated}
 }
 \value{
 An object of class \code{"trellis"}. The
@@ -80,11 +80,11 @@ plot(fit,
      border = "transparent",
      fontface = "bold.italic")
 
-# Add counts to the plot
-plot(fit, counts = TRUE)
+# Add quantities to the plot
+plot(fit, quantities = TRUE)
 
-# Add a custom legend and retain counts
-plot(fit, counts = TRUE, auto.key = list(space = "bottom", columns = 2))
+# Add a custom legend and retain quantities
+plot(fit, quantities = TRUE, auto.key = list(space = "bottom", columns = 2))
 
 # Plot without fills and distinguish sets with border types instead
 plot(fit, lty = c("solid", "dotted"), fill = "transparent", cex = 2,
@@ -106,6 +106,7 @@ plot(gridfit, layout = c(1, 4))
 }
 \seealso{
 \code{\link[=panel.euler.circles]{panel.euler.circles()}}, \code{\link[=panel.euler.labels]{panel.euler.labels()}},
+\code{\link[=panel.euler.ellipses]{panel.euler.ellipses()}},
 \code{\link[lattice:xyplot]{lattice::xyplot()}}, \code{\link[grid:gpar]{grid::gpar()}}, \code{\link[grid:grid.circle]{grid::grid.circle()}},
 \code{\link[lattice:panel.xyplot]{lattice::panel.xyplot()}}, \code{\link[=euler]{euler()}}, \code{\link[qualpalr:qualpal]{qualpalr::qualpal()}}
 }

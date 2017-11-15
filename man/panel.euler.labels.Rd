@@ -2,35 +2,42 @@
 % Please edit documentation in R/plot.euler.R
 \name{panel.euler.labels}
 \alias{panel.euler.labels}
-\title{Panel Function for Circle Labels}
+\title{Panel Function for Euler Diagram Labels}
 \usage{
-panel.euler.labels(x, y, r, labels, counts = TRUE, original.values,
-  fitted.values, ...)
+panel.euler.labels(x, y, ra, rb, phi, labels, quantities = FALSE,
+  original.values, fitted.values, ..., counts)
 }
 \arguments{
-\item{x}{X coordinates for the circle centers.}
+\item{x}{X coordinates for the centers.}
 
-\item{y}{Y coordinates for the circle centers.}
+\item{y}{Y coordinates for the centers.}
 
-\item{r}{Radii.}
+\item{ra}{Semi-major axes.}
 
-\item{labels}{Labels to plot on the circles.}
+\item{rb}{Semi-minor axes.}
 
-\item{counts}{Plots the original values for the disjoint set combinations
+\item{phi}{Rotation of the ellipse (as the counter-clockwise angle from
+the positive x-axis to the semi-major axis).}
+
+\item{labels}{Labels.}
+
+\item{quantities}{Plots the original values for the disjoint set combinations
 (\code{original.values}). Can also be a list, in which the contents of the list
 will be passed on to \code{\link[lattice:panel.text]{lattice::panel.text()}} to modify the appearance of
-the counts.}
+the quantity labels.}
 
 \item{original.values}{Original values for the disjoint set combinations.}
 
 \item{fitted.values}{Fitted values for the disjoint set combinations.}
 
 \item{...}{Arguments passed on to \code{\link[=panel.text]{panel.text()}}}
+
+\item{counts}{Deprecated}
 }
 \value{
-Computes and plots labels or counts inside the centers of the
-circles' overlaps.
+Computes and plots labels or quantities inside the centers of the
+ellipses' overlaps.
 }
 \description{
-Panel Function for Circle Labels
+Panel Function for Euler Diagram Labels
 }

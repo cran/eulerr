@@ -1,3 +1,40 @@
+# eulerr 3.0.0
+## Major changes
+* Ellipses are now supported by setting the new argument `shape = "ellipse"`
+in `euler()`. This functionality accompanies an overhaul of the
+innards of the function.
+* Initial optimization function and gradient have been ported to C++.
+* The initial optimizer has been switched from
+`stats::optim(..., method = "L-BFGS-B")` to `stats::nlminb()`.
+* The final optimizer now falls back to `GenSA::GenSA()` when the fit from
+`nlminb()` isn't good enough, by default for 3 sets and ellipses, but 
+this behavior can be controlled via a new argument `control`.
+* A packing algorithm has been introduced to arrange disjoint clusters of
+ellipses/circles.
+* The label placement algorithm has been rewritten to handle ellipses and
+been ported to C++. It now uses numerical optimization, which should
+provide slightly more accurate locations.
+* The initial optimizer now uses an analytical Hessian in addition to
+gradient.
+
+## Minor changes
+* The initial optimizer now restarts up to 10 times and picks the best
+fit (unless it is perfect somewhere along the way).
+* The default palette has been changed to a fixed palette, still adapted
+to color deficiency, but with some manual adjustments to, among other things,
+avoid unnecessary use of color.
+* The names of the `diagError` and `regionError` metrics have been changed from
+`diag_error` and `region_error` to reflect the original names.
+* The coordinates for the centers are now called *h* and *k* instead of
+*x* and *y*, respectively.
+* A new `label()` function has been added to extract locations for the overlaps
+for third party plotting (#10).
+* The `counts` argument to `plot.euler()` and `panel.euler.labels()` have
+been deprecated in favor of the more appropriate `quantities`.
+* Argument `fill_opacity` in `plot.euler()` that was deprecated in 
+[v2.0.0](https://github.com/jolars/eulerr/releases/tag/v2.0.0) has been made
+defunct.
+
 # eulerr 2.0.0
 ## Major changes
 * `eulerr()` has been replaced with `euler()` (see update 1.1.0) and made

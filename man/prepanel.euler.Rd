@@ -4,14 +4,19 @@
 \alias{prepanel.euler}
 \title{Prepanel Function for Euler Diagrams}
 \usage{
-prepanel.euler(x, y, r, subscripts, ...)
+prepanel.euler(x, y, ra, rb, phi, subscripts, ...)
 }
 \arguments{
-\item{x}{X coordinates for the circle centers.}
+\item{x}{X coordinates for the centers.}
 
-\item{y}{Y coordinates for the circle centers.}
+\item{y}{Y coordinates for the centers.}
 
-\item{r}{Radii.}
+\item{ra}{Semi-major axes.}
+
+\item{rb}{Semi-minor axes.}
+
+\item{phi}{Rotation of the ellipse (as the counter-clockwise angle from
+the positive x-axis to the semi-major axis).}
 
 \item{subscripts}{A vector of subscripts (See \code{\link[lattice:xyplot]{lattice::xyplot()}}).}
 
