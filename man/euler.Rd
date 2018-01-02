@@ -36,7 +36,7 @@ data.frame. (See the methods (by class) section for details.)}
 \item{control}{A list of control parameters.
 \itemize{
 \item \code{extraopt}: Should the more thorough optimizer (currently
-\code{\link[GenSA:GenSA]{GenSA::GenSA()}}) kick in (provided \code{extraopt_threshold} is exceeded)? The
+\code{\link[RcppDE:DEoptim]{RcppDE::DEoptim()}}) kick in (provided \code{extraopt_threshold} is exceeded)? The
 default is \code{TRUE} for ellipses and three sets and \code{FALSE} otherwise.
 \item \code{extraopt_threshold}: The threshold, in terms of \code{diagError}, for when
 the extra optimizer kicks in. This will almost always slow down the
@@ -44,7 +44,7 @@ process considerably. A value of 0 means
 that the extra optimizer will kick in if there is \emph{any} error. A value of
 1 means that it will never kick in. The default is \code{0.001}.
 \item \code{extraopt_control}: A list of control parameters to pass to the
-extra optimizer, such as \code{max.call}. See \code{\link[GenSA:GenSA]{GenSA::GenSA()}}.
+extra optimizer, such as \code{itermax}. See \code{\link[RcppDE:DEoptim.control]{RcppDE::DEoptim.control()}}.
 }}
 
 \item{weights}{A numeric vector of weights of the same length as \code{by} and
@@ -76,16 +76,7 @@ relationships. The shape of the diagram may be a circle or an ellipse.
 If the input is a matrix or data frame and argument \code{by} is specified,
 the function returns a list of euler diagrams.
 
-The function minimizes the sums of squared errors between the disjoint areas
-in the euler diagram and the user's input, namely
-
-\deqn{\sum_{i=1}^{n} (y_i - \hat{y}_i) ^ 2,}{\sum (orig - fit) ^ 2,}
-
-where \eqn{\hat{y}}{fit} are estimates of \eqn{y} that are currently being
-explored.
-
-The stress statistic from \pkg{venneuler} is returned to give an indication
-of the goodness of the fit:
+The function minimizes the \emph{stress} statistic from \pkg{venneuler},
 
 \deqn{
   \frac{
@@ -96,7 +87,8 @@ of the goodness of the fit:
 
 where \eqn{\hat{y}}{fit} are ordinary least squares estimates from the
 regression of the fitted areas on the original areas that are currently being
-explored.
+explored. The stress statistic can also be used as a goodness of fit
+measure.
 
 \code{euler()} also returns \code{diagError} and \code{regionError} from
 \emph{eulerAPE}. \code{regionError} is computed as
@@ -127,16 +119,21 @@ that set (with no duplicates). Vectors in the list do not need to be named.
 }}
 
 \examples{
-# First fit the euler specification
-fit <- euler(c("A" = 1, "B" = 0.4, "C" = 3, "A&B" = 0.2))
+# Fit a diagram with circles
+combo <- c(A = 2, B = 2, C = 2, "A&B" = 1, "A&C" = 1, "B&C" = 1)
+fit1 <- euler(combo)
 
-# Then plot it
-plot(fit)
+# Investigate the fit
+fit1
 
-# Same result as above
-euler(c("A" = 1, "B" = 0.4, "C" = 3,
-        "A&B" = 0.2, "A&C" = 0, "B&C" = 0,
-        "A&B&C" = 0))
+# Refit using ellipses instead
+fit2 <- euler(combo, shape = "ellipse")
+
+# Investigate the fit again (which is now exact)
+fit2
+
+# Plot it
+plot(fit2)
 
 # A euler diagram from a list of sample spaces (the list method)
 euler(list(A = c("a", "ab", "ac", "abc"),

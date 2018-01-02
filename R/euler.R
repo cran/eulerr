@@ -7,16 +7,7 @@
 #' If the input is a matrix or data frame and argument `by` is specified,
 #' the function returns a list of euler diagrams.
 #'
-#' The function minimizes the sums of squared errors between the disjoint areas
-#' in the euler diagram and the user's input, namely
-#'
-#' \deqn{\sum_{i=1}^{n} (y_i - \hat{y}_i) ^ 2,}{\sum (orig - fit) ^ 2,}
-#'
-#' where \eqn{\hat{y}}{fit} are estimates of \eqn{y} that are currently being
-#' explored.
-#'
-#' The stress statistic from \pkg{venneuler} is returned to give an indication
-#' of the goodness of the fit:
+#' The function minimizes the *stress* statistic from \pkg{venneuler},
 #'
 #' \deqn{
 #'   \frac{
@@ -27,7 +18,8 @@
 #'
 #' where \eqn{\hat{y}}{fit} are ordinary least squares estimates from the
 #' regression of the fitted areas on the original areas that are currently being
-#' explored.
+#' explored. The stress statistic can also be used as a goodness of fit
+#' measure.
 #'
 #' `euler()` also returns `diagError` and `regionError` from
 #' *eulerAPE*. `regionError` is computed as
@@ -49,7 +41,7 @@
 #' @param shape The geometric shape used in the diagram: `circle` or `ellipse`.
 #' @param control A list of control parameters.
 #'   * `extraopt`: Should the more thorough optimizer (currently
-#'   [GenSA::GenSA()]) kick in (provided `extraopt_threshold` is exceeded)? The
+#'   [RcppDE::DEoptim()]) kick in (provided `extraopt_threshold` is exceeded)? The
 #'   default is `TRUE` for ellipses and three sets and `FALSE` otherwise.
 #'   * `extraopt_threshold`: The threshold, in terms of `diagError`, for when
 #'   the extra optimizer kicks in. This will almost always slow down the
@@ -57,7 +49,7 @@
 #'   that the extra optimizer will kick in if there is *any* error. A value of
 #'   1 means that it will never kick in. The default is `0.001`.
 #'   * `extraopt_control`: A list of control parameters to pass to the
-#'   extra optimizer, such as `max.call`. See [GenSA::GenSA()].
+#'   extra optimizer, such as `itermax`. See [RcppDE::DEoptim.control()].
 #' @param ... Arguments passed down to other methods.
 #'
 #' @return A list object of class `'euler'` with the following parameters.
@@ -76,16 +68,21 @@
 #' @seealso [plot.euler()], [print.euler()]
 #'
 #' @examples
-#' # First fit the euler specification
-#' fit <- euler(c("A" = 1, "B" = 0.4, "C" = 3, "A&B" = 0.2))
+#' # Fit a diagram with circles
+#' combo <- c(A = 2, B = 2, C = 2, "A&B" = 1, "A&C" = 1, "B&C" = 1)
+#' fit1 <- euler(combo)
 #'
-#' # Then plot it
-#' plot(fit)
+#' # Investigate the fit
+#' fit1
 #'
-#' # Same result as above
-#' euler(c("A" = 1, "B" = 0.4, "C" = 3,
-#'         "A&B" = 0.2, "A&C" = 0, "B&C" = 0,
-#'         "A&B&C" = 0))
+#' # Refit using ellipses instead
+#' fit2 <- euler(combo, shape = "ellipse")
+#'
+#' # Investigate the fit again (which is now exact)
+#' fit2
+#'
+#' # Plot it
+#' plot(fit2)
 #'
 #' # A euler diagram from a list of sample spaces (the list method)
 #' euler(list(A = c("a", "ab", "ac", "abc"),
@@ -150,9 +147,10 @@ euler.default <- function(
   id <- bit_indexr(n)
   N <- NROW(id)
   n_restarts <- 10L # should this be made an argument?
+  small <- sqrt(.Machine$double.eps)
 
   control <- utils::modifyList(
-    list(extraopt = n == 3 && match.arg(shape) == "ellipse",
+    list(extraopt = (n == 3) && (match.arg(shape) == "ellipse"),
          extraopt_threshold = 0.001,
          extraopt_control = list()),
     control)
@@ -214,103 +212,126 @@ euler.default <- function(
     bnd <- sqrt(sum(r^2*pi))
 
     i <- 1L
-    while (loss > 1e-20 && i <= n_restarts) {
-      initial_layouts[[i]] <- stats::nlminb(
-        start = stats::runif(n*2, 0, bnd),
-        objective = optim_init_loss,
-        gradient = optim_init_grad,
-        hessian = optim_init_hess,
+    while (loss > small && i <= n_restarts) {
+      initial_layouts[[i]] <- stats::nlm(
+        f = optim_init,
+        p = stats::runif(n*2, 0, bnd),
         d = distances,
         disjoint = disjoint,
         subset = subset,
-        control = list(abs.tol = 1e-20),
-        lower = rep.int(0, 3L),
-        upper = rep.int(bnd, 3L)
+        iterlim = 1000L
       )
-      loss <- initial_layouts[[i]]$objective
+      loss <- initial_layouts[[i]]$minimum
       i <- i + 1L
     }
 
     # Find the best initial layout
     best_init <- which.min(lapply(initial_layouts[1L:(i - 1L)],
                                   "[[",
-                                  "objective"))
+                                  "minimum"))
     initial_layout <- initial_layouts[[best_init]]
 
     # Final layout
     circle <- match.arg(shape) == "circle"
 
     if (circle) {
-      pars <- as.vector(matrix(c(initial_layout$par, r), 3L, byrow = TRUE))
+      pars <- as.vector(matrix(c(initial_layout$estimate, r), 3L, byrow = TRUE))
       lwr <- rep.int(0, 3L)
-      upr <- c(bnd, bnd, bnd)
+      upr <- rep.int(bnd, 3L)
     } else {
-      pars <- as.vector(rbind(matrix(initial_layout$par, 2L, byrow = TRUE),
+      pars <- as.vector(rbind(matrix(initial_layout$estimate, 2L, byrow = TRUE),
                               r, r, 0, deparse.level = 0L))
-      lwr <- c(rep.int(0, 4L), -pi)
-      upr <- c(rep.int(bnd, 4L), pi)
+      lwr <- c(rep.int(0, 4L), -2*pi)
+      upr <- c(rep.int(bnd, 4L), 2*pi)
     }
 
     orig <- areas_disjoint
 
     # Try to find a solution using nlm() first (faster)
     # TODO: Allow user options here?
-    nlminb_solution <- stats::nlminb(
-      start = pars,
-      objective = optim_final_loss,
+    nlm_solution <- stats::nlm(
+      f = optim_final_loss,
+      p = pars,
       areas = areas_disjoint,
-      circles = circle,
-      control = list(eval.max = 1500,
-                     iter.max = 1000,
-                     abs.tol = 1e-20),
-      lower = lwr,
-      upper = upr
-    )$par
+      circle = circle,
+      iterlim = 1e4L
+    )$estimate
 
-    nlminb_fit <- as.vector(intersect_ellipses(nlminb_solution, circle))
-    nlminb_diagError <- diagError(nlminb_fit, orig)
+    tpar <- as.data.frame(matrix(
+      data = nlm_solution,
+      ncol = if (circle) 3L else 5L,
+      dimnames = list(
+        setnames,
+        if (circle) c("h", "k", "r") else c("h", "k", "a", "b", "phi")
+      ),
+      byrow = TRUE
+    ))
 
-    # If inadequate solution, try with GenSA (slower, better)
-    if (control$extraopt && nlminb_diagError > control$extraopt_threshold) {
+    # Normalize layout
+    nlm_fit <- as.vector(intersect_ellipses(nlm_solution, circle))
+
+    nlm_pars <- compress_layout(normalize_pars(tpar), id, nlm_fit)
+
+    nlm_diagError <- diagError(nlm_fit, orig)
+
+    # If inadequate solution, try with a second optimizer (slower, better)
+    if (!circle && control$extraopt &&
+        nlm_diagError > control$extraopt_threshold) {
       # Set bounds for the parameters
       newpars <- matrix(
-        data = nlminb_solution,
+        data = as.vector(t(nlm_pars)),
         ncol = 5L,
         dimnames = list(setnames, c("h", "k", "a", "b", "phi")),
         byrow = TRUE
       )
 
-      newpars <- compress_layout(newpars, id, nlminb_fit)
-      constraints <- get_constraints(newpars)
+      constraints <- get_constraints(compress_layout(newpars, id, nlm_fit))
 
-      GenSA_solution <- GenSA::GenSA(
-        par = as.vector(newpars),
+      # TODO: Set up initial population in some clever fashion.
+
+      deoptim <- RcppDE::DEoptim(
         fn = optim_final_loss,
         lower = constraints$lwr,
         upper = constraints$upr,
-        circles = circle,
+        control = do.call(
+          RcppDE::DEoptim.control,
+          utils::modifyList(
+            list(VTR = -Inf,
+                 NP = length(newpars)*10,
+                 CR = 0.6,
+                 F = 0.2,
+                 itermax = 1000L,
+                 trace = FALSE),
+            control$extraopt_control
+          )
+        ),
         areas = areas_disjoint,
-        control = utils::modifyList(
-          list(threshold.stop = 1e-20,
-               max.call = 5e3*3L^n),
-          control$extraopt_control
-        )
-      )$par
+        circle = circle
+      )
 
-      GenSA_fit <- as.vector(intersect_ellipses(GenSA_solution, circle))
-      GenSA_diagError <- diagError(GenSA_fit, orig)
+      # Fine tune the fit from DEoptim
+      last_ditch_effort <- stats::nlm(
+        f = optim_final_loss,
+        p = deoptim$optim$bestmem,
+        areas = areas_disjoint,
+        circle = circle,
+        iterlim = 1e4L
+      )$estimate
+
+      last_ditch_fit <- as.vector(intersect_ellipses(last_ditch_effort, circle))
+      last_ditch_diagError <- diagError(last_ditch_fit, orig)
 
       # Check for the best solution
-      if (GenSA_diagError < nlminb_diagError) {
-        final_par <- GenSA_solution
-        fit <- GenSA_fit
+      if (last_ditch_diagError < nlm_diagError) {
+        final_par <- last_ditch_effort
+        fit <- last_ditch_fit
       } else {
-        final_par <- nlminb_solution
-        fit <- nlminb_fit
+        final_par <- nlm_solution
+        fit <- nlm_fit
       }
     } else {
-      final_par <- nlminb_solution
-      fit <- nlminb_fit
+      final_par <- nlm_solution
+      fit <- nlm_fit
     }
 
     names(orig) <- names(fit) <-
@@ -320,7 +341,7 @@ euler.default <- function(
     diagError <- diagError(regionError = regionError)
     stress <- stress(orig, fit)
 
-    fpar <- matrix(
+    fpar <- as.data.frame(matrix(
       data = final_par,
       ncol = if (circle) 3L else 5L,
       dimnames = list(
@@ -328,7 +349,10 @@ euler.default <- function(
         if (circle) c("h", "k", "r") else c("h", "k", "a", "b", "phi")
       ),
       byrow = TRUE
-    )
+    ))
+
+    # Normalize semiaxes and rotation
+    fpar <- normalize_pars(fpar)
 
     # Find disjoint clusters and compress the layout
     fpar <- compress_layout(fpar, id, fit)
@@ -338,7 +362,7 @@ euler.default <- function(
   } else {
     circle <- match.arg(shape) == "circle"
     # One set
-    fpar <- matrix(
+    fpar <- as.data.frame(matrix(
       data = if (circle)
         c(0, 0, sqrt(areas/pi))
       else
@@ -349,7 +373,7 @@ euler.default <- function(
         if (circle) c("h", "k", "r") else c("h", "k", "a", "b", "phi")
       ),
       byrow = TRUE
-    )
+    ))
     regionError <- diagError <- stress <- 0
     orig <- fit <- areas
     names(orig) <- names(fit) <- setnames

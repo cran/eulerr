@@ -1,3 +1,24 @@
+# eulerr 3.1.0
+
+## Major changes
+* The last-ditch optimizer switched from `GenSA::GenSA()` to
+`RcppDE::DEoptim()`.
+* The optimizer used in all the remaining cases, including all circular
+diagrams and initial layouts, was switched back to `stats::nlm()` again.
+* In final optimization, we now use *stress* instead of residual sums
+of squares as a target for our optimizer.
+
+## Minor changes
+* `label` is now a proper generic with an appropriate method (`label.euler()`).
+* The **eulerr under the hood** vignette has received a substantial update.
+
+## Bug fixes
+* Fixed warnings resulting from the deprecated `counts` argument in one
+of the vignettes.
+* Fixed memcheck errors in the final optimizer.
+* Corrected erroneous labeling when `auto.key = TRUE` and labels were
+*not* in alphabetic order. (#15)
+
 # eulerr 3.0.1
 ## Bug fixes
 * Added the missing %\\VignetteEngine{knitr::knitr} to both vignettes. It had 
