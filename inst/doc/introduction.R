@@ -19,9 +19,9 @@ knitr::opts_chunk$set(
 library(lattice)
 lattice.options(default.theme = list(fontsize = list(text = 8, points = 4)))
 
-
 ## ----input---------------------------------------------------------------
 library(eulerr)
+eulerr_options(pointsize = 8)
 options(digits = 4)
 
 # Input in the form of a named numeric vector
@@ -43,19 +43,19 @@ fit2
 
 ## ----residual-plot, eval = FALSE-----------------------------------------
 #  # Cleveland dot plot of the residuals
-#  lattice::dotplot(resid(fit2), xlab = "",
-#                   panel = function(...) {
-#                     panel.abline(v = 0, lty = 2)
-#                     panel.dotplot(...)
-#                   })
+#  dotplot(resid(fit2), xlab = "",
+#          panel = function(...) {
+#            panel.abline(v = 0, lty = 2)
+#            panel.dotplot(...)
+#          })
 
 ## ----residual-dev, ref.label='residual-plot', echo = FALSE, fig.width = 3.5----
 # Cleveland dot plot of the residuals
-lattice::dotplot(resid(fit2), xlab = "",
-                 panel = function(...) {
-                   panel.abline(v = 0, lty = 2)
-                   panel.dotplot(...)
-                 })
+dotplot(resid(fit2), xlab = "",
+        panel = function(...) {
+          panel.abline(v = 0, lty = 2)
+          panel.dotplot(...)
+        })
 
 ## ----coefs---------------------------------------------------------------
 coef(fit2)
@@ -78,9 +78,15 @@ plot(fit2)
 
 ## ----custom-plot, eval = FALSE-------------------------------------------
 #  # Remove fills, vary border type, and switch fontface.
-#  plot(fit2, fill = "transparent", lty = 1:3, fontface = 4)
+#  plot(fit2,
+#       fill = "transparent",
+#       lty = 1:3,
+#       labels = list(font = 4))
 
 ## ----custom-plot, ref.label = "custom-plot", echo = FALSE----------------
 # Remove fills, vary border type, and switch fontface.
-plot(fit2, fill = "transparent", lty = 1:3, fontface = 4)
+plot(fit2,
+     fill = "transparent",
+     lty = 1:3,
+     labels = list(font = 4))
 

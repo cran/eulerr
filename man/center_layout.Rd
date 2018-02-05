@@ -2,18 +2,18 @@
 % Please edit documentation in R/layout.R
 \name{center_layout}
 \alias{center_layout}
-\title{Center Circles}
+\title{Center ellipses}
 \usage{
 center_layout(pars)
 }
 \arguments{
-\item{pars}{A matrix or data.frame of x coordinates, y coordinates, minor
-radius (a) and major radius (b).}
+\item{pars}{a matrix or data.frame of x coordinates, y coordinates, minor
+radius (a) and major radius (b)}
 }
 \value{
 A centered version of \code{pars}.
 }
 \description{
-Center Circles
+Center ellipses
 }
 \keyword{internal}

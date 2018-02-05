@@ -2,111 +2,133 @@
 % Please edit documentation in R/plot.euler.R
 \name{plot.euler}
 \alias{plot.euler}
-\title{Plot Area-Proportional Euler Diagrams}
+\title{Plot area-proportional Euler diagrams}
 \usage{
-\method{plot}{euler}(x, fill = qualpalr_pal, fill_alpha = 0.4,
-  auto.key = FALSE, quantities = FALSE, labels = is.logical(auto.key) &&
-  !isTRUE(auto.key), fontface = "bold", par.settings = list(), ...,
-  default.prepanel = prepanel.euler, default.scales = list(draw = FALSE),
-  panel = panel.euler, outer_strips, counts)
+\method{plot}{euler}(x, fills = TRUE, edges = TRUE, legend = FALSE,
+  labels = identical(legend, FALSE), quantities = FALSE, strips = NULL,
+  n = 200L, ..., fill_alpha, auto.key, fontface, par.settings,
+  default.prepanel, default.scales, panel)
 }
 \arguments{
-\item{x}{An object of class \code{euler}.}
+\item{x}{an object of class \code{'euler'}, generated from \code{\link[=euler]{euler()}}}
 
-\item{fill}{Fill color. Either a function that takes as its first argument
-the number of colors to generate, or a sequence of colors.}
+\item{fills}{a logical, vector, or list of graphical parameters for the fills
+in the diagram. Vectors are assumed to be colors for the fills.
+See \code{\link[grid:grid.path]{grid::grid.path()}}.}
 
-\item{fill_alpha}{Alpha for the fill.}
+\item{edges}{a logical, vector, or list of graphical parameters for the edges
+in the diagram. Vectors are assumed to be colors for the edges.
+See \code{\link[grid:grid.polyline]{grid::grid.polyline()}}.}
 
-\item{auto.key}{Plot a legend for the sets.}
+\item{legend}{a logical scalar or list. If a list,
+the item \code{side} can be used to set the location of the legend. See
+\code{\link[grid:grid.legend]{grid::grid.legend()}}.}
 
-\item{quantities}{Plot quantities.}
+\item{labels}{a logical, vector, or list. Vectors are assumed to be
+text for the labels. See \code{\link[grid:grid.text]{grid::grid.text()}}.}
 
-\item{labels}{A list or character vector of labels.}
+\item{quantities}{a logical, vector, or list. Vectors are assumed to be
+text for the quantities' labels, which by
+default are the original values in the input to \code{\link[=euler]{euler()}}. See
+\code{\link[grid:grid.text]{grid::grid.text()}}.}
 
-\item{fontface}{Fontface for the labels. (See \code{\link[grid:gpar]{grid::gpar()}}).}
+\item{strips}{a list, ignored unless the \code{'by'} argument
+was used in \code{\link[=euler]{euler()}}}
 
-\item{par.settings}{Graphical parameters for trellis displays. See
-\code{\link[lattice:trellis.par.get]{lattice::trellis.par.get()}}.}
+\item{n}{number of vertices for the \code{edges} and \code{fills}}
 
-\item{...}{Arguments to pass down to \code{\link[=panel.euler]{panel.euler()}}, which in turn passes
-them down to \code{\link[=panel.euler.circles]{panel.euler.circles()}} and \code{\link[=panel.euler.labels]{panel.euler.labels()}}.}
+\item{...}{parameters to update \code{fills} and \code{edges} with and thereby a shortcut
+to set these parameters}
 
-\item{default.prepanel}{Default prepanel function. Should usually be left
-untouched.}
+\item{fill_alpha}{deprecated}
 
-\item{default.scales}{Default scales. Turns off}
+\item{auto.key}{deprecated}
 
-\item{panel}{The panel function. Should usually be left untouched.}
+\item{fontface}{deprecated}
 
-\item{outer_strips}{Deprecated}
+\item{par.settings}{deprecated}
 
-\item{counts}{Deprecated}
+\item{default.prepanel}{deprecated}
+
+\item{default.scales}{deprecated}
+
+\item{panel}{deprecated}
 }
 \value{
-An object of class \code{"trellis"}. The
-  \code{\link[lattice:update.trellis]{update}} method can be used to
-  update components of the object and the
-  \code{\link[lattice:print.trellis]{print}} method (usually called by
-  default) will plot it on an appropriate plotting device.
+Provides an object of class \code{'eulergram'} , which is a
+description of the diagram to be drawn. \code{\link[=plot.eulergram]{plot.eulergram()}} does the actual
+drawing of the diagram.
 }
 \description{
-Plot Euler diagrams with trellis graphics from \pkg{lattice}. This function
-calls \code{\link[lattice:xyplot]{lattice::xyplot()}} under the hood, allowing plots of
-both individual euler diagrams as well as grids of diagrams
-in case the \code{by} argument was used in the call to \code{\link[=euler]{euler()}}.
+Plot Euler diagrams fit with \code{\link[=euler]{euler()}} using \code{\link[grid:Grid]{grid::Grid()}} graphics. This
+function sets up all the necessary plot parameters and computes
+the geometry of the diagram. \code{\link[=plot.eulergram]{plot.eulergram()}}, meanwhile,
+does the actual plotting of the diagram. Please see the \strong{Details} section
+to learn about the individual settings for each argument.
 }
 \details{
-Almost all of the relevant functionality for \code{\link[lattice:xyplot]{lattice::xyplot()}} is
-available here. For instance, providing specifications to
-\code{par.settings} will have an effect on many aspects of the plot. Moreover,
-arguments that are given here will trickle down to the panel function
-\code{\link[=panel.euler]{panel.euler()}} and subsequently to \code{\link[=panel.euler.circles]{panel.euler.circles()}} and
-\code{\link[=panel.euler.labels]{panel.euler.labels()}}, which do the actual plotting.
+Most of the arguments to this function accept either a logical, a vector, or
+a list where
+\itemize{
+\item logical values set the attribute on or off,
+\item vectors are shortcuts to commonly used options (see the individual
+parameters), and
+\item lists enable fine-grained control, including graphical
+parameters as described in \code{\link[grid:gpar]{grid::gpar()}} and control
+arguments that are specific to each argument.
+}
 
-The default value for \code{fill} causes, \pkg{eulerr} to choose color palettes
-based on the number of sets, trying to provide palettes adapted to color
-vision deficiencies based on \code{\link[qualpalr:qualpal]{qualpalr::qualpal()}}.
+The various \code{\link[grid:gpar]{grid::gpar()}} values that are available for each argument
+are:
+
+\tabular{lccccccc}{
+\tab fills \tab edges \tab labels \tab quantities \tab strips \tab legend \cr
+col        \tab       \tab x     \tab x      \tab x          \tab x      \tab x      \cr
+fill       \tab x     \tab       \tab        \tab            \tab        \tab        \cr
+alpha      \tab x     \tab x     \tab x      \tab x          \tab x      \tab x      \cr
+lty        \tab       \tab       \tab        \tab            \tab        \tab        \cr
+lwd        \tab       \tab       \tab        \tab            \tab        \tab        \cr
+lex        \tab       \tab       \tab        \tab            \tab        \tab        \cr
+fontsize   \tab       \tab x     \tab x      \tab x          \tab x      \tab x      \cr
+cex        \tab       \tab x     \tab x      \tab x          \tab x      \tab x      \cr
+fontfamily \tab       \tab x     \tab x      \tab x          \tab x      \tab x      \cr
+lineheight \tab       \tab x     \tab x      \tab x          \tab x      \tab x      \cr
+font       \tab       \tab x     \tab x      \tab x          \tab x      \tab x
+}
+
+Defaults for these values, as well as other parameters of the plots, can
+be set globally using \code{\link[=eulerr_options]{eulerr_options()}}.
+
+If the diagram has been fit using the \code{data.frame} or \code{matrix} methods
+and using the \code{by} argument, the plot area will be split into panels for
+each combination of the one to two factors.
+
+For users who are looking to plot their diagram using another package,
+all the necessary parameters can be collected if the result of this
+function is assigned to a variable (rather than printed to screen).
 }
 \examples{
 fit <- euler(c("A" = 10, "B" = 5, "A&B" = 3))
-plot(fit, labels = c("foo", "bar"), fill_alpha = 0.7)
 
 # Customize colors, remove borders, bump alpha, color labels white
 plot(fit,
-     fill_alpha = 0.5,
-     fill = c("red", "steelblue4"),
-     col = "white",
-     border = "transparent",
-     fontface = "bold.italic")
+     fills = list(fill = c("red", "steelblue4"), alpha = 0.5),
+     labels = list(col = "white", font = 4))
 
 # Add quantities to the plot
 plot(fit, quantities = TRUE)
 
 # Add a custom legend and retain quantities
-plot(fit, quantities = TRUE, auto.key = list(space = "bottom", columns = 2))
+plot(fit, quantities = TRUE, legend = list(labels = c("foo", "bar")))
 
 # Plot without fills and distinguish sets with border types instead
-plot(fit, lty = c("solid", "dotted"), fill = "transparent", cex = 2,
-     fontface = 2, labels = c("foo", "bar"))
+plot(fit, fill = "transparent", lty = 1:2)
 
-# Plot a grid of euler plots
-dat <- data.frame(
-  A      = sample(c(TRUE, FALSE), size = 100, replace = TRUE),
-  B      = sample(c(TRUE, TRUE, FALSE), size = 100, replace = TRUE),
-  gender = sample(c("Men", "Women"), size = 100, replace = TRUE),
-  nation = sample(c("Sweden", "Denmark"), size = 100, replace = TRUE)
-)
-
-gridfit <- euler(dat[, 1:2], by = dat[, 3:4])
-plot(gridfit, auto.key = TRUE)
-
-# We can modify the grid layout as well
-plot(gridfit, layout = c(1, 4))
+# save plot parameters to plot using some other method
+diagram_description <- plot(fit)
 }
 \seealso{
-\code{\link[=panel.euler.circles]{panel.euler.circles()}}, \code{\link[=panel.euler.labels]{panel.euler.labels()}},
-\code{\link[=panel.euler.ellipses]{panel.euler.ellipses()}},
-\code{\link[lattice:xyplot]{lattice::xyplot()}}, \code{\link[grid:gpar]{grid::gpar()}}, \code{\link[grid:grid.circle]{grid::grid.circle()}},
-\code{\link[lattice:panel.xyplot]{lattice::panel.xyplot()}}, \code{\link[=euler]{euler()}}, \code{\link[qualpalr:qualpal]{qualpalr::qualpal()}}
+\code{\link[=euler]{euler()}}, \code{\link[=plot.eulergram]{plot.eulergram()}}, \code{\link[grid:gpar]{grid::gpar()}},
+\code{\link[grid:grid.polyline]{grid::grid.polyline()}}, \code{\link[grid:grid.path]{grid::grid.path()}},
+\code{\link[grid:grid.legend]{grid::grid.legend()}}, \code{\link[grid:grid.text]{grid::grid.text()}}
 }

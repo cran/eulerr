@@ -1,6 +1,22 @@
+# eulerr: Area-Proportional Euler and Venn Diagrams with Circles or Ellipses
+# Copyright (C) 2018 Johan Larsson <johanlarsson@outlook.com>
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
 #' Skyline packing algorithm
 #'
-#' @param m A matrix of vertices for the rectangles.
+#' @param m a matrix of vertices for the rectangles
 #'
 #' @return A matrix with updated vertices for the rectangles.
 #'
@@ -104,68 +120,10 @@ skyline_pack <- function(m) {
   m
 }
 
-#' Shelf packing algorithm for packing rectangles in a bin.
+#' Compress an Euler layout
 #'
-#' @param m A matrix of vertices for the rectangles.
-#'
-#' @return A list with new vertices and the new order of the rectangles.
-#'
-#' @keywords internal
-shelf_pack <- function(m) {
-  # TODO(jlarsson): Introduce a better algorithm to do this, such as skyline.
-  # TODO(jlarsson): Port to c++
-  n <- ncol(m)
-  w <- (m[2L, ] - m[1L, ])
-  h <- (m[4L, ] - m[3L, ])
-  sizes <- h*w
-
-  # Pick a maximum bin width. Make sure the largest rectangle fits.
-
-  padding <- min(h, w)*0.05
-  bin_w <- max(1.3*sqrt(sum(sizes)), w + padding)
-
-  ord <- order(h, decreasing = TRUE)
-
-  w <- w[ord] + padding
-  h <- h[ord] + padding
-
-  shelf_w <- rep.int(bin_w, n) # remaining shelf width
-  shelf_h <- rep.int(0, n) # shelf heights
-
-  x0 <- double(n)
-  x1 <- double(n)
-  y0 <- double(n)
-  y1 <- double(n)
-
-  hcurr <- h[1]
-
-  for (i in seq_along(sizes)) {
-    j <- 1L
-    repeat {
-      if (shelf_w[j] - w[i] < 0) {
-        j <- j + 1L
-        if (shelf_h[j] == 0) {
-          shelf_h[j] <- shelf_h[j - 1L] + hcurr
-          hcurr <- h[i]
-        }
-      } else {
-        x0[i] <- bin_w - shelf_w[j]
-        x1[i] <- x0[i] + w[i]
-        y0[i] <- shelf_h[j]
-        y1[i] <- y0[i] + h[i]
-
-        shelf_w[j] <- shelf_w[j] - w[i]
-        break;
-      }
-    }
-  }
-  return(list(xy = rbind(x0, x1, y0, y1), ord = ord))
-}
-
-#' Compress a Euler Layout
-#'
-#' @param fpar A Euler layout fit with [euler()]
-#' @param id The binary index of sets.
+#' @param fpar an Euler layout fit with [euler()]
+#' @param id the binary index of sets
 #'
 #' @return A modified fpar object.
 #' @keywords internal
@@ -195,20 +153,48 @@ compress_layout <- function(fpar, id, fit) {
   unique_clusters <- unique_clusters[lengths(unique_clusters) > 0L]
   n_clusters <- length(unique_clusters)
 
-  if (n_clusters > 1) {
+  if (n_clusters > 0) {
     bounds <- matrix(NA, ncol = n_clusters, nrow = 4L)
 
     for (i in seq_along(unique_clusters)) {
       ii <- unique_clusters[[i]]
       h <- fpar[ii, 1L]
       k <- fpar[ii, 2L]
+
       if (NCOL(fpar) == 3L) {
         a <- b <- fpar[ii, 3L]
-        phi <- 0
+        phi <- rep.int(0, length(a))
       } else {
         a <- fpar[ii, 3L]
         b <- fpar[ii, 4L]
         phi <- fpar[ii, 5L]
+      }
+
+      # normalize rotation by setting rotation angle between two first
+      # ellipses to 0
+      o <- seq_len(length(h))
+      if (length(o) > 1) {
+        ang <- atan2(k[o[2]] - k[o[1]], h[o[2]] - h[o[1]])
+
+        h0 <- cos(-ang)*(h - h[o[1]]) - sin(-ang)*(k - k[o[1]]) + h[o[1]]
+        k0 <- sin(-ang)*(h - h[o[1]]) + cos(-ang)*(k - k[o[1]]) + k[o[1]]
+        phi0 <- phi - ang
+
+        fpar[ii, 1] <- h <- h0
+        fpar[ii, 2] <- k <- k0
+        fpar[ii, 5] <- phi <- phi0
+
+        # mirror across y axis if first shape is not at bottom
+        if ((k[1] > mean(k))) {
+          fpar[ii, 2] <- -fpar[ii, 2]
+          fpar[ii, 5] <- -fpar[ii, 5] + pi
+        }
+
+        # mirro across x axis if first set is not furthest to the left
+        if (h[1] > mean(h)) {
+          fpar[ii, 1] <- -fpar[ii, 1]
+          fpar[ii, 5] <- -fpar[ii, 5] + pi
+        }
       }
 
       limits <- get_bounding_box(h, k, a, b, phi)
@@ -217,43 +203,35 @@ compress_layout <- function(fpar, id, fit) {
       bounds[3L:4L, i] <- limits$ylim
     }
 
-    # Skyline pack the bounding rectangles
-    # TODO: Fix occasional errors in computing the bounding boxes.
-    if (all(is.finite(bounds))) {
-      new_bounds <- skyline_pack(bounds)
-
-      for (i in seq_along(unique_clusters)) {
-        ii <- unique_clusters[[i]]
-        fpar[ii, 1L] <- fpar[ii, 1L] - (bounds[1L, i] - new_bounds[1L, i])
-        fpar[ii, 2L] <- fpar[ii, 2L] - (bounds[3L, i] - new_bounds[3L, i])
+    if (n_clusters > 1) {
+      # Skyline pack the bounding rectangles
+      # TODO: Fix occasional errors in computing the bounding boxes.
+      if (all(is.finite(bounds))) {
+        new_bounds <- skyline_pack(bounds)
+        for (i in seq_along(unique_clusters)) {
+          ii <- unique_clusters[[i]]
+          fpar[ii, 1L] <- fpar[ii, 1L] - (bounds[1L, i] - new_bounds[1L, i])
+          fpar[ii, 2L] <- fpar[ii, 2L] - (bounds[3L, i] - new_bounds[3L, i])
+        }
       }
     }
   }
-
   fpar
 }
 
-#' Center Circles
+#' Center ellipses
 #'
-#' @param pars A matrix or data.frame of x coordinates, y coordinates, minor
-#'   radius (a) and major radius (b).
+#' @param pars a matrix or data.frame of x coordinates, y coordinates, minor
+#'   radius (a) and major radius (b)
 #'
 #' @return A centered version of `pars`.
 #' @keywords internal
 center_layout <- function(pars) {
   x <- pars[, 1L]
   y <- pars[, 2L]
-
-  if (NCOL(pars) == 3) {
-    # Circles
-    a <- b <- pars[, 3L]
-    phi <- 0
-  } else {
-    # Ellipses
-    a <- pars[, 3L]
-    b <- pars[, 4L]
-    phi <- pars[, ]
-  }
+  a <- pars[, 3L]
+  b <- pars[, 4L]
+  phi <- pars[, 5L]
 
   cphi <- cos(phi)
   sphi <- sin(phi)
@@ -263,4 +241,14 @@ center_layout <- function(pars) {
   pars[, 1L] <- x + abs(xlim[1L] - xlim[2L])/2 - xlim[2L]
   pars[, 2L] <- y + abs(ylim[1L] - ylim[2L])/2 - ylim[2L]
   pars
+}
+
+normalize_rotation <- function(pars) {
+  x <- pars[, 1L]
+  y <- pars[, 2L]
+  a <- pars[, 3L]
+  b <- pars[, 4L]
+  phi <- pars[, 5L]
+
+  size_order <- order(a*b)
 }

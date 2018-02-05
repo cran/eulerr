@@ -2,21 +2,21 @@
 % Please edit documentation in R/utils.R
 \name{rescale}
 \alias{rescale}
-\title{Rescale Values to a New Range}
+\title{Rescale values to new range}
 \usage{
 rescale(x, new_min, new_max)
 }
 \arguments{
-\item{x}{Numeric vector}
+\item{x}{numeric vector}
 
-\item{new_min}{New min}
+\item{new_min}{new min}
 
-\item{new_max}{New max}
+\item{new_max}{new max}
 }
 \value{
 Rescaled vector
 }
 \description{
-Rescale Values to a New Range
+Rescale values to new range
 }
 \keyword{internal}

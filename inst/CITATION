@@ -1,15 +1,25 @@
+# year
+i <- regexpr("(?<=\\s{1})\\d{4}(?=-{1})", meta$Built, perl = TRUE)
+year <- substring(meta$Built, i, i + 3)
+
+# version
+vers <- meta$Version
+if(is.null(vers))
+  vers <- packageVersion("eulerr")
+note <- paste("R package version", vers)
+
 citHeader("To cite eulerr in publications, please use")
 
 citEntry(entry = "Manual",
-  title        = "{eulerr}: Area-Proportional {Euler} and {Venn} Diagrams with Circles or Ellipses",
+  title        = "{eulerr}: Area-Proportional {Euler} and {Venn} Diagrams with Ellipses",
   author       = personList(as.person("Johan Larsson")),
-  year         = "2017",
-  note         = "R package version 3.0.1",
+  year         = year,
+  note         = note,
   url          = "https://cran.r-project.org/package=eulerr",
-
-  textVersion  =
-  paste("Johan Larsson (2017).",
-        "eulerr: Area-Proportional Euler and Venn Diagrams with Circles or Ellipses",
-        "R package version 3.0.1",
-        "URL https://cran.r-project.org/package=eulerr")
+  textVersion  = paste(
+    paste0("Johan Larsson (", year, ")."),
+    "eulerr: Area-Proportional Euler and Venn Diagrams with Ellipses",
+    note,
+    "URL https://cran.r-project.org/package=eulerr"
+  )
 )

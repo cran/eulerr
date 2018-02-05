@@ -2,19 +2,19 @@
 % Please edit documentation in R/layout.R
 \name{compress_layout}
 \alias{compress_layout}
-\title{Compress a Euler Layout}
+\title{Compress an Euler layout}
 \usage{
 compress_layout(fpar, id, fit)
 }
 \arguments{
-\item{fpar}{A Euler layout fit with \code{\link[=euler]{euler()}}}
+\item{fpar}{an Euler layout fit with \code{\link[=euler]{euler()}}}
 
-\item{id}{The binary index of sets.}
+\item{id}{the binary index of sets}
 }
 \value{
 A modified fpar object.
 }
 \description{
-Compress a Euler Layout
+Compress an Euler layout
 }
 \keyword{internal}

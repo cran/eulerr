@@ -2,17 +2,17 @@
 % Please edit documentation in R/utils.R
 \name{is_false}
 \alias{is_false}
-\title{Check If Object Is Strictly FALSE}
+\title{Check if object is strictly FALSE}
 \usage{
 is_false(x)
 }
 \arguments{
-\item{x}{Object to check.}
+\item{x}{object to check}
 }
 \value{
-Logical.
+A logical.
 }
 \description{
-Check If Object Is Strictly FALSE
+Check if object is strictly FALSE
 }
 \keyword{internal}

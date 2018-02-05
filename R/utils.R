@@ -1,33 +1,47 @@
-#' Tally Set Relationships
+# eulerr: Area-Proportional Euler and Venn Diagrams with Circles or Ellipses
+# Copyright (C) 2018 Johan Larsson <johanlarsson@outlook.com>
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+#' Tally set relationships
 #'
-#' @param sets A data.frame with set relationships and weights.
+#' @param sets a data.frame with set relationships and weights
+#' @param weights a numeric vector
 #'
 #' @return Calls [euler()] after the set relationships have been coerced to a
 #'   named numeric vector.
 #' @keywords internal
-tally_combinations <- function(sets) {
-  weights <- sets$weights
-  sets <- sets[, !(colnames(sets) == "weights")]
+tally_combinations <- function(sets, weights) {
   if (!is.matrix(sets))
     sets <- as.matrix(sets)
 
   id <- bit_indexr(NCOL(sets))
   tally <- double(NROW(id))
 
-  for (i in 1:NROW(id)) {
+  for (i in seq_len(NROW(id))) {
     tally[i] <-
       sum(as.numeric(colSums(t(sets) == id[i, ]) == NCOL(sets))*weights)
     names(tally)[i] <- paste0(colnames(sets)[id[i, ]], collapse = "&")
   }
-
-  euler(tally)
+  tally
 }
 
-#' Rescale Values to a New Range
+#' Rescale values to new range
 #'
-#' @param x Numeric vector
-#' @param new_min New min
-#' @param new_max New max
+#' @param x numeric vector
+#' @param new_min new min
+#' @param new_max new max
 #'
 #' @return Rescaled vector
 #' @keywords internal
@@ -35,32 +49,47 @@ rescale <- function(x, new_min, new_max) {
   (new_max - new_min)/(max(x) - min(x))*(x - max(x)) + new_max
 }
 
-#' Update a List with User Input
+#' Update list with input
 #'
-#' Wrapper for [utils::modifyList()].
+#' A wrapper for [utils::modifyList()] that attempts to coerce non-lists to
+#' lists before updating.
 #'
-#' @param x A list to be updated.
-#' @param val Stuff to update `x` with.
+#' @param x a list to be updated
+#' @param val stuff to update `x` with
 #'
 #' @seealso [utils::modifyList()]
 #' @return Returns an updated list.
 #' @keywords internal
-update_list <- function(x, val) {
-  if (is.null(x))
-    x <- list()
-  if (!is.list(val))
-    tryCatch(val <- as.list(val))
-  if (!is.list(x))
-    tryCatch(x <- as.list(x))
-  utils::modifyList(x, val)
+update_list <- function(old, new) {
+  if (is.null(old))
+    old <- list()
+  if (!is.list(new))
+    tryCatch(new <- as.list(new))
+  if (!is.list(old))
+    tryCatch(old <- as.list(old))
+  utils::modifyList(old, new)
 }
 
-#' Suppress Plotting
+#' Replace (refresh) a list
 #'
-#' @param x Object to call [graphics::plot()] on.
-#' @param ... Arguments to pass to `x`.
+#' Unlike `update_list`, this function only modifies, and does not add,
+#' items in the list.
 #'
-#' @return Invisibly returns whatever `plot(x)` would normally returns, but
+#' @param old the original list
+#' @param new the things to update `old` with
+#'
+#' @return A refreshed list.
+#' @keywords internal
+replace_list <- function(old, new) {
+  update_list(old, new[names(new) %in% names(old)])
+}
+
+#' Suppress plotting
+#'
+#' @param x object to call [graphics::plot()] on
+#' @param ... arguments to pass to `x`
+#'
+#' @return Invisibly returns whatever `plot(x)` would normally return, but
 #'   does not plot anything (which is the point).
 #' @keywords internal
 dont_plot <- function(x, ...) {
@@ -72,39 +101,23 @@ dont_plot <- function(x, ...) {
   invisible(p)
 }
 
-#' Suppress Printing
+#' Suppress printing
 #'
-#' @param x Object to (not) print.
-#' @param ... Arguments to `x`.
+#' @param x object to (not) print
+#' @param ... arguments to `x`
 #'
-#' @return Nothing, which is the point.
+#' @return Invisibly returns the output of running print on `x`.
 #' @keywords internal
 dont_print <- function(x, ...) {
   utils::capture.output(y <- print(x, ...))
   invisible(y)
 }
 
-# Set up qualitative color palette ----------------------------------------
-
-#' Set up a Qualitative Color Palette
+#' Check if object is strictly FALSE
 #'
-#' Uses a custom color palette generated from [qualpalr::qualpal()],
-#' which tries to provide distinct color palettes adapted to color vision
-#' deficiency.
+#' @param x object to check
 #'
-#' @param n Number of Colors to Generate
-#'
-#' @return A string of hex colors
-#' @keywords internal
-qualpalr_pal <- function(n) {
-  palette[1L:n]
-}
-
-#' Check If Object Is Strictly FALSE
-#'
-#' @param x Object to check.
-#'
-#' @return Logical.
+#' @return A logical.
 #' @keywords internal
 is_false <- function(x) {
   identical(x, FALSE)
@@ -114,9 +127,9 @@ is_false <- function(x) {
 #'
 #' Wraps around bit_indexr().
 #'
-#' @param n Number of items to generate permutations from.
+#' @param n number of items to generate permutations from
 #'
-#' @return A matrix of logicals
+#' @return A matrix of logicals.
 #' @keywords internal
 bit_indexr <- function(n) {
   m <- bit_index_cpp(n)
@@ -126,11 +139,10 @@ bit_indexr <- function(n) {
 
 #' regionError
 #'
-#' @param fit Fitted values
-#' @param orig Original values
+#' @param fit fitted values
+#' @param orig original values
 #'
 #' @return regionError
-#' @export
 #' @keywords internal
 regionError <- function(fit, orig) {
   abs(fit/sum(fit) - orig/sum(orig))
@@ -138,12 +150,11 @@ regionError <- function(fit, orig) {
 
 #' diagError
 #'
-#' @param fit Fitted values
-#' @param orig Original values
+#' @param fit fitted values
+#' @param orig original values
 #' @param regionError regionError
 #'
 #' @return diagError
-#' @export
 #' @keywords internal
 diagError <- function(fit, orig, regionError = NULL) {
   if(!is.null(regionError)) {
@@ -155,10 +166,9 @@ diagError <- function(fit, orig, regionError = NULL) {
 
 #' Get the number of sets in he input
 #'
-#' @param combinations A vector of combinations (see [euler()]).
+#' @param combinations a vector of combinations (see [euler()])
 #'
 #' @return The number of sets in the input
-#' @export
 #' @keywords internal
 n_sets <- function(combinations) {
   combo_names <- strsplit(names(combinations), split = "&", fixed = TRUE)
@@ -168,10 +178,9 @@ n_sets <- function(combinations) {
 
 #' Set up constraints for optimization
 #'
-#' @param newpars Parameters from the first optimizer.
+#' @param newpars parameters from the first optimizer
 #'
 #' @return A list of lower and upper constraints
-#' @export
 #' @keywords internal
 get_constraints <- function(newpars) {
   h   <- newpars[, 1L]
@@ -209,10 +218,9 @@ get_constraints <- function(newpars) {
 
 #' Normalize an angle to [-pi, pi)
 #'
-#' @param x Angle in radians
+#' @param x angle in radians
 #'
 #' @return A normalized angle.
-#' @export
 #' @keywords internal
 normalize_angle <- function(x) {
   a <- (x + pi) %% (2*pi)
@@ -223,11 +231,10 @@ normalize_angle <- function(x) {
 #'
 #' @param m pars
 #'
-#' @return m, normalized
-#' @export
+#' @return `m`, normalized
 #' @keywords internal
 normalize_pars <- function(m) {
-  n <- ncol(m)
+  n <- NCOL(m)
   if (n == 3L) {
     m[, 3L] <- abs(m[, 3L])
   } else {
@@ -236,3 +243,39 @@ normalize_pars <- function(m) {
   }
   m
 }
+
+#' Blend (average) colors
+#'
+#' @param rcol_in a vector of R colors
+#'
+#' @return A single R color
+#' @keywords internal
+mix_colors <- function(rcol_in) {
+  rgb_in <- t(grDevices::col2rgb(rcol_in))
+  lab_in <- grDevices::convertColor(rgb_in, "sRGB", "Lab", scale.in = 255)
+  mean_col <- colMeans(lab_in)
+  rgb_out <- grDevices::convertColor(mean_col, "Lab", "sRGB", scale.out = 1)
+  grDevices::rgb(rgb_out)
+}
+
+#' Setup gpars
+#'
+#' @param x input
+#' @param n required number of items
+#' @param default default values
+#' @param user user-inputted values
+#'
+#' @return a `gpar` object
+#' @keywords internal
+setup_gpar <- function(default = list(), user = list(), n) {
+  # set up gpars
+  if (is.list(user)) {
+    gp <- replace_list(default, user)
+  } else {
+    gp <- default
+  }
+  gp <- lapply(gp, function(x) if (is.function(x)) x(n) else x)
+
+  do.call(grid::gpar, lapply(gp, rep_len, n))
+}
+
