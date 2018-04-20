@@ -1,3 +1,26 @@
+# eulerr 4.1.0
+
+## Minor changes
+
+* `plot.euler()` now returns a `gTree` object. All of the plotting mechanisms 
+are now also found in this function and `plot.eulergram()` and
+`print.eulergram()` basically just call `grid::grid.draw()` on the result
+of `plot.euler()`. This change means that functions such as
+`gridExtra::grid.arrange()` now work as one would intuit on the objects
+produced by `plot.euler()`. 
+* Fitting and plotting euler diagrams with empty sets is now allowed (#23).
+Empty sets in the input will be returned as `NA` in the resulting
+`data.frame` of ellipses.
+* The last-ditch optimizer has been switched back to `GenSA::GenSA()` from
+`RcppDE::DEoptim()`.
+
+## Bug fixes
+
+* The **grid** parameters available for *edges* are now correctly specified in
+the manual for `plot.euler()`.
+* `euler.data.frame()` now works as expected for tibbles (from the **tibble**
+package) when argument `by` is used.
+
 # eulerr 4.0.0
 
 ## Major changes

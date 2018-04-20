@@ -1,9 +1,10 @@
 Package: eulerr
 Title: Area-Proportional Euler and Venn Diagrams with Circles or
         Ellipses
-Version: 4.0.0
+Version: 4.1.0
 Authors@R: c(person("Johan", "Larsson", email = "johanlarsson@outlook.com",
-                    role = c("aut", "cre")),
+                    role = c("aut", "cre"),
+                    comment = c(ORCID = "0000-0002-4029-5945")),
              person("A. Jonathan R.", "Godfrey", role = "ctb"),
              person("Tim", "Kelley", role = "ctb", 
                     comment = "original Nelder-Mead code"),
@@ -18,7 +19,7 @@ Description: Generate area-proportional Euler diagrams
     represented. Diagrams may be fit with ellipses and circles via
     a wide range of inputs and can be visualized in numerous ways.
 Depends: R (>= 3.3.0)
-Imports: graphics, grDevices, grid, lattice, polyclip, Rcpp, RcppDE,
+Imports: graphics, grDevices, grid, lattice, polyclip, Rcpp, GenSA,
         stats, utils,
 Suggests: covr, knitr, pBrackets, RConics, testthat
 LinkingTo: Rcpp (>= 0.12.12), RcppArmadillo (>= 0.7.600.1.0)
@@ -30,8 +31,8 @@ URL: https://github.com/jolars/eulerr
 BugReports: https://github.com/jolars/eulerr/issues
 RoxygenNote: 6.0.1
 NeedsCompilation: yes
-Packaged: 2018-02-05 15:05:18 UTC; johan
-Author: Johan Larsson [aut, cre],
+Packaged: 2018-04-20 06:30:00 UTC; jolars
+Author: Johan Larsson [aut, cre] (<https://orcid.org/0000-0002-4029-5945>),
   A. Jonathan R. Godfrey [ctb],
   Tim Kelley [ctb] (original Nelder-Mead code),
   David H. Eberly [ctb] (geometric algorithms),
@@ -39,4 +40,4 @@ Author: Johan Larsson [aut, cre],
   Emanuel Huber [ctb] (root solver code)
 Maintainer: Johan Larsson <johanlarsson@outlook.com>
 Repository: CRAN
-Date/Publication: 2018-02-05 22:30:26 UTC
+Date/Publication: 2018-04-20 06:48:29 UTC

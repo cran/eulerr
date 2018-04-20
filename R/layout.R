@@ -227,28 +227,23 @@ compress_layout <- function(fpar, id, fit) {
 #' @return A centered version of `pars`.
 #' @keywords internal
 center_layout <- function(pars) {
-  x <- pars[, 1L]
-  y <- pars[, 2L]
-  a <- pars[, 3L]
-  b <- pars[, 4L]
-  phi <- pars[, 5L]
+  void <- pars[, 3L] == 0 | pars[, 4L] == 0
+  h <- pars[!void, 1L]
+  k <- pars[!void, 2L]
+  a <- pars[!void, 3L]
+  b <- pars[!void, 4L]
+  phi <- pars[!void, 5L]
 
   cphi <- cos(phi)
   sphi <- sin(phi)
-  xlim <- range(c(x + a*cphi, x + b*cphi, x - a*cphi, x - b*cphi))
-  ylim <- range(c(y + a*sphi, y + b*sphi, y - a*sphi, y - b*sphi))
+  xlim <- range(c(h + a*cphi, h + b*cphi, h - a*cphi, h - b*cphi))
+  ylim <- range(c(k + a*sphi, k + b*sphi, k - a*sphi, k - b*sphi))
 
-  pars[, 1L] <- x + abs(xlim[1L] - xlim[2L])/2 - xlim[2L]
-  pars[, 2L] <- y + abs(ylim[1L] - ylim[2L])/2 - ylim[2L]
+  pars[!void, 1L] <- h + abs(xlim[1L] - xlim[2L])/2 - xlim[2L]
+  pars[!void, 2L] <- k + abs(ylim[1L] - ylim[2L])/2 - ylim[2L]
+  if (any(!void)) {
+    pars[void, 1L] <- sum(pars[!void, 1L])/sum(!void)
+    pars[void, 2L] <- sum(pars[!void, 2L])/sum(!void)
+  }
   pars
-}
-
-normalize_rotation <- function(pars) {
-  x <- pars[, 1L]
-  y <- pars[, 2L]
-  a <- pars[, 3L]
-  b <- pars[, 4L]
-  phi <- pars[, 5L]
-
-  size_order <- order(a*b)
 }

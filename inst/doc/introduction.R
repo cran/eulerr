@@ -77,15 +77,17 @@ plot(fit3)
 plot(fit2)
 
 ## ----custom-plot, eval = FALSE-------------------------------------------
-#  # Remove fills, vary border type, and switch fontface.
+#  # Remove fills, vary borders, display quantities, and switch font.
 #  plot(fit2,
+#       quantities = TRUE,
 #       fill = "transparent",
 #       lty = 1:3,
 #       labels = list(font = 4))
 
 ## ----custom-plot, ref.label = "custom-plot", echo = FALSE----------------
-# Remove fills, vary border type, and switch fontface.
+# Remove fills, vary borders, display quantities, and switch font.
 plot(fit2,
+     quantities = TRUE,
      fill = "transparent",
      lty = 1:3,
      labels = list(font = 4))
