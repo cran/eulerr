@@ -15,10 +15,10 @@ This function gets or sets updates in the global environment
 that are used in \code{\link[=plot.euler]{plot.euler()}}.
 }
 \description{
-This function provides a means to set default parameters for plots
-produced by \code{\link[=plot.euler]{plot.euler()}}. Query \code{\link[=eulerr_options]{eulerr_options()}} (without any
+This function provides a means to set default parameters for functions
+in eulerr. Query \code{\link[=eulerr_options]{eulerr_options()}} (without any
 argument) to see all the available options and read more about
-them in \code{\link[grid:gpar]{grid::gpar()}} and \code{\link[graphics:par]{graphics::par()}}.
+the plot-related ones in \code{\link[grid:gpar]{grid::gpar()}} and \code{\link[graphics:par]{graphics::par()}}.
 }
 \details{
 Currently, the following items will be considered:
@@ -37,10 +37,12 @@ some margin sizes in the resulting plot}
 \code{lineheight}, and \code{font}}
 \item{legend}{arguments to \code{\link[grid:legendGrob]{grid::legendGrob()}} as well as \code{col}, \code{alpha},
 \code{fontsize}, \code{cex}, \code{fontfamily}, \code{lineheight}, and \code{font}}
+\item{main}{arguments to \code{\link[grid:textGrob]{grid::textGrob()}}}
 }
 }
 \examples{
 eulerr_options(edges = list(col = "blue"), fontsize = 10)
+eulerr_options(n_threads = 2)
 }
 \seealso{
 \code{\link[=plot.euler]{plot.euler()}}, \code{\link[grid:gpar]{grid::gpar()}}, \code{\link[graphics:par]{graphics::par()}}

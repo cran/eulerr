@@ -7,37 +7,26 @@
 using namespace Rcpp;
 
 // intersect_ellipses
-arma::vec intersect_ellipses(const arma::vec& par, const bool circle);
-RcppExport SEXP _eulerr_intersect_ellipses(SEXP parSEXP, SEXP circleSEXP) {
+std::vector<double> intersect_ellipses(const std::vector<double>& par, const bool circle, const bool approx);
+RcppExport SEXP _eulerr_intersect_ellipses(SEXP parSEXP, SEXP circleSEXP, SEXP approxSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< const arma::vec& >::type par(parSEXP);
+    Rcpp::traits::input_parameter< const std::vector<double>& >::type par(parSEXP);
     Rcpp::traits::input_parameter< const bool >::type circle(circleSEXP);
-    rcpp_result_gen = Rcpp::wrap(intersect_ellipses(par, circle));
-    return rcpp_result_gen;
-END_RCPP
-}
-// stress
-double stress(const arma::vec& orig, const arma::vec& fit);
-RcppExport SEXP _eulerr_stress(SEXP origSEXP, SEXP fitSEXP) {
-BEGIN_RCPP
-    Rcpp::RObject rcpp_result_gen;
-    Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< const arma::vec& >::type orig(origSEXP);
-    Rcpp::traits::input_parameter< const arma::vec& >::type fit(fitSEXP);
-    rcpp_result_gen = Rcpp::wrap(stress(orig, fit));
+    Rcpp::traits::input_parameter< const bool >::type approx(approxSEXP);
+    rcpp_result_gen = Rcpp::wrap(intersect_ellipses(par, circle, approx));
     return rcpp_result_gen;
 END_RCPP
 }
 // optim_final_loss
-double optim_final_loss(const arma::vec& par, const arma::vec& areas, const bool circle);
+double optim_final_loss(const std::vector<double>& par, const std::vector<double>& areas, const bool circle);
 RcppExport SEXP _eulerr_optim_final_loss(SEXP parSEXP, SEXP areasSEXP, SEXP circleSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< const arma::vec& >::type par(parSEXP);
-    Rcpp::traits::input_parameter< const arma::vec& >::type areas(areasSEXP);
+    Rcpp::traits::input_parameter< const std::vector<double>& >::type par(parSEXP);
+    Rcpp::traits::input_parameter< const std::vector<double>& >::type areas(areasSEXP);
     Rcpp::traits::input_parameter< const bool >::type circle(circleSEXP);
     rcpp_result_gen = Rcpp::wrap(optim_final_loss(par, areas, circle));
     return rcpp_result_gen;
@@ -54,22 +43,6 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< const Rcpp::LogicalMatrix& >::type disjoint(disjointSEXP);
     Rcpp::traits::input_parameter< const Rcpp::LogicalMatrix& >::type subset(subsetSEXP);
     rcpp_result_gen = Rcpp::wrap(optim_init(par, d, disjoint, subset));
-    return rcpp_result_gen;
-END_RCPP
-}
-// locate_centers
-arma::mat locate_centers(const arma::rowvec& h, const arma::rowvec& k, const arma::rowvec& a, const arma::rowvec& b, const arma::rowvec& phi, const arma::colvec& fitted);
-RcppExport SEXP _eulerr_locate_centers(SEXP hSEXP, SEXP kSEXP, SEXP aSEXP, SEXP bSEXP, SEXP phiSEXP, SEXP fittedSEXP) {
-BEGIN_RCPP
-    Rcpp::RObject rcpp_result_gen;
-    Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< const arma::rowvec& >::type h(hSEXP);
-    Rcpp::traits::input_parameter< const arma::rowvec& >::type k(kSEXP);
-    Rcpp::traits::input_parameter< const arma::rowvec& >::type a(aSEXP);
-    Rcpp::traits::input_parameter< const arma::rowvec& >::type b(bSEXP);
-    Rcpp::traits::input_parameter< const arma::rowvec& >::type phi(phiSEXP);
-    Rcpp::traits::input_parameter< const arma::colvec& >::type fitted(fittedSEXP);
-    rcpp_result_gen = Rcpp::wrap(locate_centers(h, k, a, b, phi, fitted));
     return rcpp_result_gen;
 END_RCPP
 }
@@ -111,11 +84,9 @@ END_RCPP
 }
 
 static const R_CallMethodDef CallEntries[] = {
-    {"_eulerr_intersect_ellipses", (DL_FUNC) &_eulerr_intersect_ellipses, 2},
-    {"_eulerr_stress", (DL_FUNC) &_eulerr_stress, 2},
+    {"_eulerr_intersect_ellipses", (DL_FUNC) &_eulerr_intersect_ellipses, 3},
     {"_eulerr_optim_final_loss", (DL_FUNC) &_eulerr_optim_final_loss, 3},
     {"_eulerr_optim_init", (DL_FUNC) &_eulerr_optim_init, 4},
-    {"_eulerr_locate_centers", (DL_FUNC) &_eulerr_locate_centers, 6},
     {"_eulerr_choose_two", (DL_FUNC) &_eulerr_choose_two, 1},
     {"_eulerr_discdisc", (DL_FUNC) &_eulerr_discdisc, 4},
     {"_eulerr_bit_index_cpp", (DL_FUNC) &_eulerr_bit_index_cpp, 1},

@@ -1,25 +1,9 @@
-# eulerr: Area-Proportional Euler and Venn Diagrams with Circles or Ellipses
-# Copyright (C) 2018 Johan Larsson <johanlarsson@outlook.com>
-#
-# This program is free software: you can redistribute it and/or modify
-# it under the terms of the GNU General Public License as published by
-# the Free Software Foundation, either version 3 of the License, or
-# (at your option) any later version.
-#
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License for more details.
-#
-# You should have received a copy of the GNU General Public License
-# along with this program.  If not, see <http://www.gnu.org/licenses/>.
-
 #' Get or set global graphical parameters for eulerr
 #'
-#' This function provides a means to set default parameters for plots
-#' produced by [plot.euler()]. Query [eulerr_options()] (without any
+#' This function provides a means to set default parameters for functions
+#' in eulerr. Query [eulerr_options()] (without any
 #' argument) to see all the available options and read more about
-#' them in [grid::gpar()] and [graphics::par()].
+#' the plot-related ones in [grid::gpar()] and [graphics::par()].
 #'
 #' Currently, the following items will be considered:
 #' \describe{
@@ -37,6 +21,7 @@
 #'   `lineheight`, and `font`}
 #'   \item{legend}{arguments to [grid::legendGrob()] as well as `col`, `alpha`,
 #'   `fontsize`, `cex`, `fontfamily`, `lineheight`, and `font`}
+#'   \item{main}{arguments to [grid::textGrob()]}
 #' }
 #'
 #' @param ... objects to update the global graphical parameters for \pkg{eulerr}
@@ -49,6 +34,7 @@
 #'
 #' @examples
 #' eulerr_options(edges = list(col = "blue"), fontsize = 10)
+#' eulerr_options(n_threads = 2)
 eulerr_options <- function(...) {
   new <- list(...)
   if (is.null(names(new)) && length(new) == 1L && is.list(new[[1L]]))
@@ -74,6 +60,7 @@ eulerr_options <- function(...) {
            quantities = list(fontsize = pointsize),
            strips = list(fontsize = pointsize),
            legend = list(fontsize = pointsize),
+           main = list(fontsize = pointsize),
            pointsize = pointsize)
     )
   invisible(out)
@@ -152,6 +139,24 @@ eulerr_default_options <- function() {
       vgap = grid::unit(0.25, "lines"),
       default.units = "lines",
       pch = 21
+    ),
+    main = list(
+      label = NULL,
+      x = grid::unit(0.5, "npc"),
+      y = grid::unit(0.5, "npc"),
+      just = "center",
+      hjust = NULL,
+      vjust = NULL,
+      rot = 0,
+      check.overlap = FALSE,
+      default.units = "npc",
+      cex = 1.5,
+      fontsize = 12,
+      font = 1,
+      fontfamily = "",
+      col = 1,
+      lineheight = 1.2,
+      alpha = 1
     )
   )
 }
