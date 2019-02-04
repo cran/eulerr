@@ -1,6 +1,6 @@
 Package: eulerr
 Title: Area-Proportional Euler and Venn Diagrams with Ellipses
-Version: 5.0.0
+Version: 5.1.0
 Authors@R: c(person("Johan", "Larsson", email = "mail@larssonjohan.com",
                     role = c("aut", "cre"),
                     comment = c(ORCID = "0000-0002-4029-5945")),
@@ -18,19 +18,19 @@ Description: Generate area-proportional Euler diagrams
 Depends: R (>= 3.3.0)
 Imports: GenSA, graphics, grDevices, grid, polyclip, polylabelr, Rcpp,
         stats, utils
-Suggests: covr, knitr, lattice, pBrackets, RConics, testthat, spelling,
-        rmarkdown
+Suggests: covr, knitr, lattice, pBrackets, RConics, rmarkdown,
+        testthat, spelling
 LinkingTo: Rcpp (>= 0.12.12), RcppArmadillo (>= 0.7.600.1.0)
 License: GPL-3
 Encoding: UTF-8
 LazyData: true
 VignetteBuilder: knitr
-URL: https://github.com/jolars/eulerr
+URL: https://github.com/jolars/eulerr, https://jolars.github.io/eulerr/
 BugReports: https://github.com/jolars/eulerr/issues
-RoxygenNote: 6.1.0
+RoxygenNote: 6.1.1
 Language: en-US
 NeedsCompilation: yes
-Packaged: 2018-11-05 18:33:55 UTC; jolars
+Packaged: 2019-02-04 13:20:53 UTC; johan
 Author: Johan Larsson [aut, cre] (<https://orcid.org/0000-0002-4029-5945>),
   A. Jonathan R. Godfrey [ctb],
   Peter Gustafsson [ctb],
@@ -38,4 +38,4 @@ Author: Johan Larsson [aut, cre] (<https://orcid.org/0000-0002-4029-5945>),
   Emanuel Huber [ctb] (root solver code)
 Maintainer: Johan Larsson <mail@larssonjohan.com>
 Repository: CRAN
-Date/Publication: 2018-11-05 19:10:02 UTC
+Date/Publication: 2019-02-04 13:43:13 UTC

@@ -1,3 +1,32 @@
+# eulerr 5.1.0
+
+## New features
+
+* `venn()` is a new function that produces Venn diagrams for up to
+5 sets. The interface
+is almost identical to `euler()` except that a single integer
+can also be provided. A new vignette, *Venn diagrams with eulerr*, 
+examplifies its use.
+
+## Minor changes
+
+* Calculations for the strips in `plot.euler()` when a list of
+Euler diagrams is given has been improved. Setting `fontsize` or
+`cex` now results in appropriately sized strips as one would expect.
+* Tiny overlaps (where the fraction of the area is less than one
+thousandth of the largest overlap) in the final diagram are no longer
+plotted.
+* `eulergram()` objects from `plot.euler()` now have a proper grob name 
+for the canvas grob, so that extracting information from them is easier.
+
+## Bug fixes
+
+* Return value documentation for `euler()` now correctly says "ellipses"
+and not "coefficients".
+* `data.frame` or `matrix` inputs now work properly
+when values are given as numerics. (#42)
+* Fixed some spelling errors in news and vignettes.
+
 # eulerr 5.0.0
 
 ## New features
@@ -87,10 +116,10 @@ method for plotting diagrams has also changed---rather than overlaying
 shapes on top of each other, the diagram is now split into separate polygons
 using the **polyclip** package. Instead of relying on semi-transparent fills,
 the colors of the fills are now blended in the CIELab color space (#16).
-* The default color palette has been resdesigned from scratch to suit the
+* The default color palette has been redesigned from scratch to suit the
 new plot method.
 * A new function `eulerr_options()` have been provided in order to set
-default grahical parameters for the diagrams.
+default graphical parameters for the diagrams.
 
 ## Minor changes
 
@@ -228,7 +257,7 @@ deprecated.
 ## Minor changes
 
 * Added a `counts` argument to `plot.eulerr`, which intersections and
-complements with counts from the original set specificiation (#6).
+complements with counts from the original set specification (#6).
 * Added a `key` argument to `plot.eulerr` that prints a legend next to the
 diagram.
 * Switched to `atan2()` from RcppArmadillo.
@@ -257,7 +286,7 @@ computes loss from disjoint class combinations.
 * Final optimization routines have been completely rewritten in C++ using Rcpp
 and RcppArmadillo.
 * Switched to the cost function from EulerAPE for the default optimization
-target but added the posibility to choose cost function via a `cost` argument
+target but added the possibility to choose cost function via a `cost` argument
 (currently `eulerAPE` or `venneuler`).
 * Added the option to produce conditional eulerr plots via a `by` argument to
 `eulerr`. The result is a list of euler diagrams that can be plotted
