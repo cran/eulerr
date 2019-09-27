@@ -8,13 +8,13 @@
 #' Currently, the following items will be considered:
 #' \describe{
 #'   \item{pointsize}{size in pts to be used as basis for fontsizes and
-#'   some margin sizes in the resulting plot}
+#'   some margin sizes in the resulting plot}#'
 #'   \item{fills}{a list of items `fill` and `alpha`}
 #'   \item{edges}{a list of items `col`, `alpha`, `lex`, `lwd`, and `lty`}
 #'   \item{labels}{a list of items `rot`,
 #'   `col`, `alpha`, `fontsize`, `cex`, `fontfamily`, `fontface`,
 #'   `lineheight`, and `font`}
-#'   \item{quantities}{a list of items `rot`,
+#'   \item{quantities}{a list of items `type`, `rot`,
 #'   `col`, `alpha`, `fontsize`, `cex`, `fontfamily`,
 #'   `lineheight`, and `font`}
 #'   \item{strips}{`col`, `alpha`, `fontsize`, `cex`, `fontfamily`,
@@ -22,6 +22,10 @@
 #'   \item{legend}{arguments to [grid::legendGrob()] as well as `col`, `alpha`,
 #'   `fontsize`, `cex`, `fontfamily`, `lineheight`, and `font`}
 #'   \item{main}{arguments to [grid::textGrob()]}
+#'   \item{padding}{a [grid::unit()] giving the padding between various
+#'   elements in plots from [plot.euler()], which you can change
+#'   if you, for instance, want to increase spacing between labels,
+#'   quantities, and percentages.}
 #' }
 #'
 #' @param ... objects to update the global graphical parameters for \pkg{eulerr}
@@ -108,6 +112,7 @@ eulerr_default_options <- function() {
       font = 2
     ),
     quantities = list(
+      type = "numbers",
       rot = 0,
       col = 1L,
       alpha = 1,
@@ -159,7 +164,8 @@ eulerr_default_options <- function() {
       col = 1,
       lineheight = 1.2,
       alpha = 1
-    )
+    ),
+    padding = grid::unit(0.4, "lines")
   )
 }
 

@@ -1,3 +1,38 @@
+# eulerr 6.0.0
+
+## New features
+
+* In `plot.euler()`, percentages can be added to the plot in addition to or
+instead of counts by providing a `list` to the `quantities` argument
+with an item `type` that can take any combination of `counts` and `percent`.
+This change also comes with a redesign of the grid graphics
+implementation for labels. 
+* `eulerr_options()` gains a new argument
+`padding` which controls the amount of padding between labels and quantities.
+(#48)
+* `plot.euler()` now uses code from the **ggrepel** package to prevent
+labels from overlapping or escaping the plot area if `adjust_labels` is
+set to `TRUE`.
+* A new vignette featuring a gallery of plots from the package has been
+added.
+
+## Minor changes
+
+* The default `cex` for quantity labels has changed from 1.0 to 0.9.
+* Labels for sets that overlap are now merged (partly fixes #45)
+* The fill colors for sets which are completely contained within another set 
+are now once again composed of a mix of the color of the subset and
+the superset.
+* Plotting data has been exposed in a `data` slot in the object created
+by calling to `plot.euler()` (#57)
+
+
+## Bug fixes
+
+* An error in layout normalization that occurred sometimes
+with ellipses has been fixed.
+
+
 # eulerr 5.1.0
 
 ## New features
@@ -6,7 +41,7 @@
 5 sets. The interface
 is almost identical to `euler()` except that a single integer
 can also be provided. A new vignette, *Venn diagrams with eulerr*, 
-examplifies its use.
+exemplifies its use.
 
 ## Minor changes
 

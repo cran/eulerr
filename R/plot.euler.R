@@ -24,19 +24,19 @@
 #' The various [grid::gpar()] values that are available for each argument
 #' are:
 #'
-#' \tabular{lcccccccc}{
-#'              \tab fills \tab edges \tab labels \tab quantities \tab strips \tab legend \tab main \cr
-#'   col        \tab       \tab x     \tab x      \tab x          \tab x      \tab x      \tab x    \cr
-#'   fill       \tab x     \tab       \tab        \tab            \tab        \tab        \tab      \cr
-#'   alpha      \tab x     \tab x     \tab x      \tab x          \tab x      \tab x      \tab x    \cr
-#'   lty        \tab       \tab x     \tab        \tab            \tab        \tab        \tab      \cr
-#'   lwd        \tab       \tab x     \tab        \tab            \tab        \tab        \tab      \cr
-#'   lex        \tab       \tab x     \tab        \tab            \tab        \tab        \tab      \cr
-#'   fontsize   \tab       \tab       \tab x      \tab x          \tab x      \tab x      \tab x    \cr
-#'   cex        \tab       \tab       \tab x      \tab x          \tab x      \tab x      \tab x    \cr
-#'   fontfamily \tab       \tab       \tab x      \tab x          \tab x      \tab x      \tab x    \cr
-#'   lineheight \tab       \tab       \tab x      \tab x          \tab x      \tab x      \tab x    \cr
-#'   font       \tab       \tab       \tab x      \tab x          \tab x      \tab x      \tab x    \cr
+#' \tabular{lccccccccc}{
+#'              \tab fills \tab edges \tab labels \tab quantities  \tab strips \tab legend \tab main \cr
+#'   col        \tab       \tab x     \tab x      \tab x           \tab x      \tab x      \tab x    \cr
+#'   fill       \tab x     \tab       \tab        \tab             \tab        \tab        \tab      \cr
+#'   alpha      \tab x     \tab x     \tab x      \tab x           \tab x      \tab x      \tab x    \cr
+#'   lty        \tab       \tab x     \tab        \tab             \tab        \tab        \tab      \cr
+#'   lwd        \tab       \tab x     \tab        \tab             \tab        \tab        \tab      \cr
+#'   lex        \tab       \tab x     \tab        \tab             \tab        \tab        \tab      \cr
+#'   fontsize   \tab       \tab       \tab x      \tab x           \tab x      \tab x      \tab x    \cr
+#'   cex        \tab       \tab       \tab x      \tab x           \tab x      \tab x      \tab x    \cr
+#'   fontfamily \tab       \tab       \tab x      \tab x           \tab x      \tab x      \tab x    \cr
+#'   lineheight \tab       \tab       \tab x      \tab x           \tab x      \tab x      \tab x    \cr
+#'   font       \tab       \tab       \tab x      \tab x           \tab x      \tab x      \tab x    \cr
 #' }
 #'
 #' Defaults for these values, as well as other parameters of the plots, can
@@ -64,8 +64,12 @@
 #'   text for the labels. See [grid::grid.text()].
 #' @param quantities a logical, vector, or list. Vectors are assumed to be
 #'   text for the quantities' labels, which by
-#'   default are the original values in the input to [euler()]. See
-#'   [grid::grid.text()].
+#'   default are the original values in the input to [euler()]. In addition
+#'   to arguments that apply to [grid::grid.text()], an argument `type` may
+#'   also be used which should be a combination of `"counts"` and
+#'   `"percent"`. The first item will be printed first and the second
+#'   will be printed thereafter inside brackets. The default is
+#'   `type = "counts"`.
 #' @param strips a list, ignored unless the `'by'` argument
 #'   was used in [euler()]
 #' @param n number of vertices for the `edges` and `fills`
@@ -77,6 +81,10 @@
 #'   named `'label'` must be provided (and will be used for the actual text).
 #' @param ... parameters to update `fills` and `edges` with and thereby a shortcut
 #'   to set these parameters
+#'   [grid::grid.text()].
+#' @param adjust_labels a logical. If `TRUE`, adjustment will be made to avoid
+#'   overlaps or out-of-limits plotting of labels, quantities, and
+#'   percentages.
 #'
 #' @seealso [euler()], [plot.eulergram()], [grid::gpar()],
 #'   [grid::grid.polyline()], [grid::grid.path()],
@@ -101,7 +109,7 @@
 #' plot(fit, quantities = TRUE, legend = list(labels = c("foo", "bar")))
 #'
 #' # Plot without fills and distinguish sets with border types instead
-#' plot(fit, fill = "transparent", lty = 1:2)
+#' plot(fit, fills = "transparent", lty = 1:2)
 #'
 #' # Save plot parameters to plot using some other method
 #' diagram_description <- plot(fit)
@@ -117,7 +125,10 @@ plot.euler <- function(x,
                        strips = NULL,
                        main = NULL,
                        n = 200L,
+                       adjust_labels = TRUE,
                        ...) {
+
+  stopifnot(is.logical(adjust_labels))
 
   # retrieve default options
   opar <- eulerr_options()
@@ -143,6 +154,56 @@ plot.euler <- function(x,
   id <- bit_indexr(n_e)
 
   setnames <- rownames(ellipses)
+
+  if (do_groups) {
+    res <- lapply(x, function(xi) is.na(xi$ellipses)[, 1L])
+    empty_sets <- apply(do.call(rbind, res), 2, all)
+
+    empty_subsets <- rowSums(id[, empty_sets, drop = FALSE]) > 0
+
+    res <- lapply(x, function(xi) {
+      fitted <- xi$fitted.values[!empty_subsets]
+      nonzero <- nonzero_fit(fitted)
+      ifelse(is.na(nonzero), FALSE, nonzero)
+    })
+
+    nonzero <- apply(do.call(rbind, res), 2, any)
+
+  } else {
+    empty_sets <- is.na(x$ellipses[, 1L])
+    empty_subsets <- rowSums(id[, empty_sets, drop = FALSE]) > 0
+    fitted <- x$fitted.values[!empty_subsets]
+    nonzero <- nonzero_fit(fitted)
+    nonzero <- ifelse(is.na(nonzero), FALSE, nonzero)
+  }
+
+  merged_sets <- rep(FALSE, length(setnames))
+
+  if (!do_groups && any(nonzero)) {
+    n_overlaps <- integer(n_id)
+    single_mass <- logical(n_e)
+
+    for (i in seq_len(n_e)) {
+      nz <- nonzero_fit(x$fitted.values)
+      nzi <- nz & id[, i]
+
+      if (sum(nzi) == 1) {
+        n_overlaps[which(nzi)] <- n_overlaps[which(nzi)] + 1
+      }
+
+      single_mass[i] <- sum(nzi) == 1
+    }
+
+    complete_overlaps <- n_overlaps > 1
+
+    merge_sets <- id[complete_overlaps, ] & single_mass
+
+    if (any(merge_sets)) {
+      setnames[merge_sets] <- paste(setnames[merge_sets],
+                                    collapse = ",")
+      merged_sets[which(merge_sets)[length(which(merge_sets))]] <- TRUE
+    }
+  }
 
   stopifnot(n > 0, is.numeric(n) && length(n) == 1)
 
@@ -241,9 +302,22 @@ plot.euler <- function(x,
   # setup quantities
   if (do_quantities) {
     if (is.list(quantities)) {
+      if (!is.null(quantities$type)) {
+        if (!all(quantities$type %in% c("counts", "percent")))
+          stop("'type' must be one or both of 'counts' and 'percent")
+
+        quantities_type <- match.arg(quantities$type,
+                                     c("counts", "percent"),
+                                     several.ok = TRUE)
+      } else {
+        quantities_type <- opar$quantities$type
+      }
+
       quantities <- update_list(list(labels = NULL,
+                                     type = quantities_type,
                                      rot = opar$quantities$rot),
                                 quantities)
+
     } else if (isTRUE(quantities)) {
       quantities <- list(labels = NULL, rot = opar$quantities$rot)
     } else {
@@ -271,9 +345,9 @@ plot.euler <- function(x,
     # TODO: create a better, custom legend
 
     legend <- update_list(
-      list(labels = if (do_labels) labels$labels else setnames,
+      list(labels = setnames[!empty_sets & !merged_sets],
            side = opar$legend$side,
-           nrow = n_e,
+           nrow = sum(!empty_sets),
            ncol = 1L,
            byrow = opar$legend$byrow,
            do.lines = opar$legend$do.lines,
@@ -287,22 +361,25 @@ plot.euler <- function(x,
 
     legend$gp <- setup_gpar(
       list(
-        fill = if (do_fills) fills$gp$fill else "transparent",
+        fill = if (do_fills) fills$gp$fill[!empty_sets & !merged_sets] else "transparent",
         alpha = if (do_fills)
-          fills$gp$alpha
+          fills$gp$alpha[!empty_sets & !merged_sets]
         else if (do_edges)
-          edges$gp$alpha
+          edges$gp$alpha[!empty_sets & !merged_sets]
         else
           0,
         cex = opar$legend$cex,
-        fontsize = opar$legend$fontsize/opar$legend$cex,
+        fontsize =
+          opar$legend$fontsize/opar$legend$cex,
         font = opar$legend$font,
         fontfamily = opar$legend$fontfamily,
-        lwd = if (do_edges) edges$gp$lwd else 0,
-        lex = if (do_edges) edges$gp$lex else 0,
-        col = if (do_edges) edges$gp$col else "transparent"),
+        lwd = if (do_edges) edges$gp$lwd[!empty_sets & !merged_sets] else 0,
+        lex = if (do_edges) edges$gp$lex[!empty_sets & !merged_sets] else 0,
+        col = if (do_edges)
+          edges$gp$col[!empty_sets & !merged_sets]
+          else "transparent"),
       legend,
-      n_e
+      sum(!empty_sets)
     )
   } else {
     legend <- NULL
@@ -353,7 +430,6 @@ plot.euler <- function(x,
   }
 
   # set up geometry for diagrams
-
   if (do_groups) {
     data <- lapply(x,
                    setup_geometry,
@@ -362,15 +438,17 @@ plot.euler <- function(x,
                    labels = labels,
                    quantities = quantities,
                    n = n,
-                   id = id)
+                   id = id,
+                   merged_sets = merged_sets)
   } else {
     data <- setup_geometry(x,
-                           fills,
-                           edges,
-                           labels,
-                           quantities,
-                           n,
-                           id)
+                           fills = fills,
+                           edges = edges,
+                           labels = labels,
+                           quantities = quantities,
+                           n = n,
+                           id = id,
+                           merged_sets = merged_sets)
   }
 
   # start setting up grobs
@@ -384,7 +462,9 @@ plot.euler <- function(x,
                                               edges = edges,
                                               labels = labels,
                                               quantities = quantities,
-                                              number = i)
+                                              number = i,
+                                              adjust_labels = adjust_labels,
+                                              merged_sets = merged_sets)
     }
     euler_grob <- grid::gTree(grid::nullGrob(),
                               name = "canvas.grob",
@@ -401,9 +481,12 @@ plot.euler <- function(x,
                               edges = edges,
                               labels = labels,
                               quantities = quantities,
-                              number = 1)
+                              number = 1,
+                              adjust_labels = adjust_labels,
+                              merged_sets = merged_sets)
     euler_grob <- grid::grobTree(euler_grob,
                                  name = "canvas.grob")
+
     xlim <- data$xlim
     ylim <- data$ylim
     pos <- c(1L, 1L)
@@ -421,7 +504,7 @@ plot.euler <- function(x,
   }
 
   ar <- xrng/yrng
-  adjust <- layout[1L]/layout[2]
+  # adjust <- layout[1L]/layout[2]
 
   do_strip_left <- layout[1L] > 1L && do_strips
   do_strip_top <- layout[2L] > 1L && do_strips
@@ -621,13 +704,18 @@ plot.euler <- function(x,
 
   euler_grob$vp <- canvas_vp
 
-    # return a gTree object
-  grid::grobTree(
+  # return a gTree object
+  children <- gList(
     if (do_main) main_grob = main_grob,
     if (do_strip_top) strip_top_grob = strip_top_grob,
     if (do_strip_left) strip_left_grob = strip_left_grob,
     if (do_legend) legend_grob = legend_grob,
-    euler_grob = euler_grob,
+    euler_grob = euler_grob
+  )
+
+  grid::gTree(
+    data = data,
+    children = children,
     vp = grid::viewport(layout = grid::grid.layout(nrow = nrow,
                                                    ncol = ncol,
                                                    widths = widths,
@@ -692,308 +780,6 @@ locate_centers <- function(p, precision = 1) {
   }
 }
 
-#' Compute geometries and label locations
-#'
-#' @param x an object of class 'euler'
-#' @param do_fills do fills?
-#' @param do_edges do edges?
-#' @param do_labels do labels?
-#' @param do_quantities do quantities?
-#'
-#' @return a list object with slots for the various objects
-#' @keywords internal
-setup_geometry <- function(x,
-                           fills,
-                           edges,
-                           labels,
-                           quantities,
-                           n,
-                           id) {
-  dd <- x$ellipses
-  empty_sets <- is.na(dd[, 1L])
-  empty_subsets <- rowSums(id[, empty_sets, drop = FALSE]) > 0
-
-  orig <- x$original.values[!empty_subsets]
-  fitted <- x$fitted.values[!empty_subsets]
-  dd <- dd[!empty_sets, , drop = FALSE]
-
-  # avoid plotting very small intersections
-  nonzero <- abs(fitted)/max(abs(fitted)) > 1e-3
-  nonzero <- ifelse(is.na(nonzero), FALSE, nonzero)
-
-  do_fills <- !is.null(fills)
-  do_edges <- !is.null(edges)
-  do_labels <- !is.null(labels)
-  do_quantities <- !is.null(quantities)
-
-  id <- id[!empty_subsets, !empty_sets, drop = FALSE]
-
-  h <- dd$h
-  k <- dd$k
-  a <- dd$a
-  b <- dd$b
-  phi <- dd$phi
-
-  n_e <- NROW(dd)
-  n_id <- 2L^n_e - 1L
-
-  e <- ellipse(h, k, a, b, phi, n)
-  e_x <- c(lapply(e, "[[", "x"), recursive = TRUE)
-  e_y <- c(lapply(e, "[[", "y"), recursive = TRUE)
-
-  limits <- get_bounding_box(h, k, a, b, phi)
-
-  # setup edges
-  if (do_edges)
-    edges <- list(x = e_x, y = e_y, id.lengths = rep.int(n, n_e))
-
-  if (do_fills || do_labels || do_quantities) {
-    # decompose ellipse polygons into intersections
-    pieces <- fills <- vector("list", n_id)
-    for (i in rev(seq_len(n_id))) {
-      if (nonzero[i]) {
-        idx <- which(id[i, ])
-        n_idx <- length(idx)
-
-        if (n_idx == 1L) {
-          pieces[[i]] <- list(e[[idx[1]]])
-        } else {
-          pieces[[i]] <- poly_clip(e[[idx[1L]]], e[[idx[2L]]], "intersection")
-          if (n_idx > 2L) {
-            for (j in 3L:n_idx) {
-              pieces[[i]] <- poly_clip(pieces[[i]], e[[idx[j]]], "intersection")
-            }
-          }
-        }
-
-        for (j in which(!id[i, ])) {
-          pieces[[i]] <- poly_clip(pieces[[i]], e[[j]], "minus")
-        }
-      }
-    }
-
-    for (i in seq_along(pieces)) {
-      x0 <- lapply(pieces[[i]], "[[", "x")
-      y0 <- lapply(pieces[[i]], "[[", "y")
-
-      if (length(x0) > 0L) {
-        fills[[i]]$x <- c(x0, recursive = TRUE)
-        fills[[i]]$y <- c(y0, recursive = TRUE)
-        fills[[i]]$id.lengths <- lengths(x0)
-      }
-    }
-  }
-
-  if (do_labels || do_quantities) {
-    singles <- rowSums(id) == 1
-    empty <- abs(fitted) < sqrt(.Machine$double.eps)
-
-    width <- abs(limits$xlim[1] - limits$xlim[2])
-    height <- abs(limits$ylim[1] - limits$ylim[2])
-
-    prec <- max(width, height)/100
-
-    centers <- lapply(pieces, locate_centers, precision = prec)
-
-    centers <- cbind(vapply(centers, "[[", "x", FUN.VALUE = double(1)),
-                     vapply(centers, "[[", "y", FUN.VALUE = double(1)),
-                     seq_len(n_id))
-    rownames(centers) <- names(orig)
-
-    if (do_labels) {
-      labels <- list(labels = labels$labels[which(!empty_sets)])
-      center_labels <- labels$labels[!is.na(centers[singles, 1L])]
-    }
-
-    labels_centers <- centers[!is.na(centers[, 1L]) & singles, , drop = FALSE]
-
-    droprows <- rep.int(TRUE, NROW(centers))
-    for (i in which(is.na(centers[singles, 1L]))) {
-      pick <- id[, i] & !empty & !is.na(centers[, 1L])
-      labels_centers <- rbind(labels_centers, centers[which(pick)[1L], ])
-      if (do_labels)
-        center_labels <- c(center_labels, labels$labels[i])
-      droprows[which(pick)[1L]] <- FALSE
-    }
-
-    if (do_quantities) {
-      quantities_centers <-
-        centers[!is.na(centers[, 1L]) & !singles & droprows, , drop = FALSE]
-      quantities_centers <- rbind(quantities_centers, labels_centers)
-      if (!is.null(quantities$labels))
-        quantities <- list(
-          labels =
-            quantities$labels[which(!empty_subsets)][quantities_centers[, 3L]]
-        )
-      else
-        quantities <- list(labels = orig[quantities_centers[, 3L]])
-      quantities$x <- quantities_centers[, 1L]
-      quantities$y <- quantities_centers[, 2L]
-    }
-
-    if (do_labels) {
-      labels$x <- labels_centers[, 1L]
-      labels$y <- labels_centers[, 2L]
-      labels$labels <- center_labels
-    }
-  }
-
-  list(ellipses = dd,
-       fitted.values = fitted,
-       original.values = orig,
-       fills = fills,
-       edges = edges,
-       labels = labels,
-       quantities = quantities,
-       empty_sets = empty_sets,
-       empty_subsets = empty_subsets,
-       xlim = limits$xlim,
-       ylim = limits$ylim)
-}
-
-
-#' Grobify Euler objects
-#'
-#' @param x geometry data
-#' @param fills fills params
-#' @param edges edges params
-#' @param labels labels params
-#' @param quantities quantities params
-#' @param number current diagram number
-#'
-#' @return A [grid::gList()] is returned.
-#' @keywords internal
-setup_grobs <- function(x,
-                        fills,
-                        edges,
-                        labels,
-                        quantities,
-                        number) {
-  data_labels <- x$labels
-  data_edges <- x$edges
-  data_fills <- x$fills
-  data_quantities <- x$quantities
-  fitted <- x$fitted.values
-  empty_sets <- x$empty_sets
-  empty_subsets <- x$empty_subsets
-
-  do_labels <- !is.null(data_labels)
-  do_edges <- !is.null(data_edges)
-  do_fills <- !is.null(data_fills)
-  do_quantities <- !is.null(data_quantities)
-
-  n_e <- NROW(x$ellipses)
-  n_id <- 2L^n_e - 1L
-  id <- bit_indexr(n_e)
-
-  #edges
-  if (do_edges) {
-    # edges
-    if (is.null(data_edges$x)) {
-      edges_grob <- grid::nullGrob()
-    } else {
-      edges_grob <- grid::polylineGrob(data_edges$x,
-                                       data_edges$y,
-                                       id.lengths = data_edges$id.lengths,
-                                       default.units = "native",
-                                       name = "edges.grob",
-                                       gp = edges$gp[which(!empty_sets)])
-    }
-  }
-
-  # fills
-  if (do_fills) {
-    if (n_e == 0) {
-      fills_grob <- grid::nullGrob()
-    } else if (n_e == 1) {
-      fills_grob <- grid::gList(grid::polygonGrob(
-        data_fills[[1]]$x,
-        data_fills[[1]]$y,
-        default.units = "native",
-        name = "fills.grob",
-        gp = fills$gp[which(!empty_subsets)[1L]]
-      ))
-    } else {
-      fills_grob <- vector("list", n_id)
-      fill_id <- seq_len(n_id)
-      empty_cols <- colSums(id & fitted > 0) == 0
-      # skip <- rowSums(id[, empty_cols, drop = FALSE]) > 0
-      empty <- fitted < sqrt(.Machine$double.eps)
-      for (i in seq_len(n_e)) {
-        if (empty[i] && !empty_cols[i]) {
-          idx <- id[i, ]
-          n_idx <- sum(idx)
-          sub_id <- rowSums(id[, idx, drop = FALSE]) == n_idx
-          next_num <- min(rowSums(id[sub_id & rowSums(id) > n_idx & !empty, ,
-                                     drop = FALSE]))
-          next_level <- rowSums(id) == next_num & sub_id
-          if (any(next_level)) {
-            fill_id[next_level] <- fill_id[i]
-          }
-        }
-      }
-
-      for (i in seq_len(n_id)) {
-        if (is.null(data_fills[[i]])) {
-          fills_grob[[i]] <- grid::nullGrob(name = paste0("fills.grob.", i))
-        } else
-          fills_grob[[i]] <- grid::pathGrob(
-            data_fills[[i]]$x,
-            data_fills[[i]]$y,
-            id.lengths = data_fills[[i]]$id.lengths,
-            default.units = "native",
-            name = paste0("fills.grob.", i),
-            gp = fills$gp[which(!empty_subsets)][fill_id[i]]
-          )
-      }
-      fills_grob <- do.call(grid::gList, fills_grob)
-    }
-  }
-
-  # quantities
-  if (do_quantities)  {
-    quantities_id <- rep.int(FALSE, length(data_quantities$x))
-    if (do_labels)
-      quantities_id[names(data_quantities$x) %in% names(data_labels$x)] <- TRUE
-    lab_id <- quantities_id
-
-    quantities_grob <- grid::textGrob(
-      label = data_quantities$labels,
-      x = data_quantities$x,
-      y = data_quantities$y,
-      rot = quantities$rot[which(!empty_subsets)],
-      vjust = ifelse(lab_id & do_labels, 1, 0.5),
-      name = "quantities.grob",
-      default.units = "native",
-      gp = quantities$gp[which(!empty_subsets)]
-    )
-  }
-
-  # labels
-  if (do_labels) {
-    if (length(data_labels$x) > 0) {
-      labels_grob <- grid::textGrob(
-        label = data_labels$labels,
-        x = data_labels$x,
-        y = data_labels$y,
-        rot = labels$rot[which(!empty_sets)],
-        vjust = if (do_quantities) -0.5 else 0.5,
-        name = "labels.grob",
-        default.units = "native",
-        gp = labels$gp[!empty_sets]
-      )
-    } else {
-      labels_grob <- grid::nullGrob()
-    }
-  }
-
-  grid::grobTree(if (do_fills) fills_grob,
-                 if (do_edges) edges_grob,
-                 if (do_labels) labels_grob,
-                 if (do_quantities) quantities_grob,
-                 name = paste0("diagram.grob.", number))
-}
-
 #' @rdname plot.euler
 #' @export
 plot.venn <- function(x,
@@ -1005,6 +791,7 @@ plot.venn <- function(x,
                       strips = NULL,
                       main = NULL,
                       n = 200L,
+                      adjust_labels = TRUE,
                       ...)
 {
   NextMethod("plot", ..., quantities = quantities)
