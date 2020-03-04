@@ -1,3 +1,24 @@
+# eulerr 6.0.2
+
+## Bug fixes
+
+* Set `stringsAsFactors = TRUE` inside all relevant functions in `euler()`
+  to avoid errors in upcoming R version.
+* Fix broken link in *euler under the hood* vignette.
+
+# eulerr 6.0.1
+
+## Minor changes
+
+* Throw an error message when the number of sets in `venn()` exceeds 5 (#65)
+* Performance improved when large lists are used as input to `euler()` and
+  `venn()` (#64, @privefl)
+
+## Bug fixes
+
+* Correctly handle `data.frame` inputs to `euler()` when categorical
+  variables are character vectors and not factors.
+
 # eulerr 6.0.0
 
 ## New features

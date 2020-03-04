@@ -1,4 +1,4 @@
-## ----setup, include = FALSE----------------------------------------------
+## ----setup, include = FALSE---------------------------------------------------
 knitr::opts_chunk$set(
   collapse = TRUE,
   comment = "#>"
@@ -6,7 +6,7 @@ knitr::opts_chunk$set(
 
 options(digits = 4)
 
-## ----input---------------------------------------------------------------
+## ----input--------------------------------------------------------------------
 library(eulerr)
 
 # Input in the form of a named numeric vector
@@ -23,10 +23,10 @@ mat <- cbind(
 )
 fit2 <- euler(mat)
 
-## ------------------------------------------------------------------------
+## -----------------------------------------------------------------------------
 fit2
 
-## ----residual-plot, fig.cap = "Residuals for the fit diagram."-----------
+## ----residual-plot, fig.cap = "Residuals for the fit diagram."----------------
 # Cleveland dot plot of the residuals
 library(lattice)
 dotplot(resid(fit2), xlab = "",
@@ -35,13 +35,13 @@ dotplot(resid(fit2), xlab = "",
           panel.dotplot(...)
         })
 
-## ----error-plot, fig.cap = "A plot from `error_plot()`."-----------------
+## ----error-plot, fig.cap = "A plot from `error_plot()`."----------------------
 error_plot(fit2)
 
-## ----coefs---------------------------------------------------------------
+## ----coefs--------------------------------------------------------------------
 coef(fit2)
 
-## ----fig.cap = "A difficult combination from Wilkinson 2012."------------
+## ----fig.cap = "A difficult combination from Wilkinson 2012."-----------------
 wilkinson2012 <-  c(A = 4, B = 6, C = 3, D = 2, E = 7, F = 3,
                     "A&B" = 2, "A&F" = 2, "B&C" = 2, "B&D" = 1,
                     "B&F" = 2, "C&D" = 1, "D&E" = 1, "E&F" = 1,
