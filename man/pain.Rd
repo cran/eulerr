@@ -4,15 +4,17 @@
 \name{pain}
 \alias{pain}
 \title{Pain distribution data}
-\format{A flat \link{table} (cross-table) with with sex in columns and
+\format{
+A flat \link{table} (cross-table) with with sex in columns and
 pain distribution in rows and integer counts making up the cells of the
-table.}
+table.
+}
 \source{
 Westergren H, Larsson J, Freeman M, Carlsson A, Jöud A,
 Malmström E-M. Sex-based differences in pain distribution in a cohort of
 patients with persistent post-traumatic neck pain. Disability and
 Rehabilitation. 2017 Jan 27; Available
-from: \url{http://www.tandfonline.com/eprint/RK8tusJswJCsa9YakGDW/full}
+from: \url{https://www.tandfonline.com/eprint/RK8tusJswJCsa9YakGDW/full}
 }
 \usage{
 pain
