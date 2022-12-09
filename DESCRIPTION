@@ -1,6 +1,6 @@
 Package: eulerr
 Title: Area-Proportional Euler and Venn Diagrams with Ellipses
-Version: 6.1.1
+Version: 7.0.0
 Authors@R: c(person("Johan", "Larsson", email = "johanlarsson@outlook.com",
                     role = c("aut", "cre"),
                     comment = c(ORCID = "0000-0002-4029-5945")),
@@ -10,8 +10,6 @@ Authors@R: c(person("Johan", "Larsson", email = "johanlarsson@outlook.com",
                     comment = "geometric algorithms"),
              person("Emanuel", "Huber", role = "ctb",
                     comment = "root solver code"),
-             person("Kamil", "Slowikowski", role = c("ctb", "cph"),
-                    comment = "modified code from ggrepel"),
              person("Florian", "Privé", role = "ctb"))
 Description: Generate area-proportional Euler diagrams
     using numerical optimization. An Euler diagram is a generalization of a Venn
@@ -24,23 +22,23 @@ Imports: GenSA, graphics, grDevices, grid, polyclip, polylabelr, Rcpp,
 Suggests: covr, knitr, lattice, pBrackets, RConics, rmarkdown,
         testthat, spelling
 LinkingTo: Rcpp (>= 0.12.12), RcppArmadillo (>= 0.7.600.1.0)
+SystemRequirements: C++14
 License: GPL-3
 Encoding: UTF-8
 LazyData: true
 VignetteBuilder: knitr
 URL: https://github.com/jolars/eulerr, https://jolars.github.io/eulerr/
 BugReports: https://github.com/jolars/eulerr/issues
-RoxygenNote: 7.1.1
+RoxygenNote: 7.2.2
 Language: en-US
 NeedsCompilation: yes
-Packaged: 2021-09-06 11:46:44 UTC; gerd-jln
+Packaged: 2022-12-09 15:54:58 UTC; gerd-jln
 Author: Johan Larsson [aut, cre] (<https://orcid.org/0000-0002-4029-5945>),
   A. Jonathan R. Godfrey [ctb],
   Peter Gustafsson [ctb],
   David H. Eberly [ctb] (geometric algorithms),
   Emanuel Huber [ctb] (root solver code),
-  Kamil Slowikowski [ctb, cph] (modified code from ggrepel),
   Florian Privé [ctb]
 Maintainer: Johan Larsson <johanlarsson@outlook.com>
 Repository: CRAN
-Date/Publication: 2021-09-06 13:40:09 UTC
+Date/Publication: 2022-12-10 00:00:02 UTC

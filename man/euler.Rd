@@ -15,6 +15,8 @@ euler(combinations, ...)
   combinations,
   input = c("disjoint", "union"),
   shape = c("circle", "ellipse"),
+  loss = c("square", "abs", "region"),
+  loss_aggregator = c("sum", "max"),
   control = list(),
   ...
 )
@@ -44,6 +46,13 @@ data.frame (see \strong{methods (by class)})}
 (\code{'disjoint'}) or unions (\code{'union'}).}
 
 \item{shape}{geometric shape used in the diagram}
+
+\item{loss}{type of loss to minimize over. If \code{"square"} is used together
+with the value \code{"sum"} for \code{loss_aggregator}, then the resulting loss
+function is the sum of squared errors, which is the default.}
+
+\item{loss_aggregator}{how the final loss is computed. \code{"sum"} indicates that
+the sum of the losses computed by \code{loss} are summed up. \code{"max"} indicates}
 
 \item{control}{a list of control parameters.
 \itemize{
@@ -98,9 +107,10 @@ The function minimizes the residual sums of squares,
 }{
   \sum (A_i - \omega_i)^2,
 }
-where \eqn{\omega_i} the size of the ith disjoint subset, and \eqn{A_i} the
-corresponding area in the diagram, that is, the unique contribution to the
-total area from this overlap.
+by default, where \eqn{\omega_i} the size of the ith disjoint subset, and
+\eqn{A_i} the corresponding area in the diagram, that is, the unique
+contribution to the total area from this overlap. The loss function
+can, however, be controlled via the \code{loss} argument.
 
 \code{\link[=euler]{euler()}} also returns \code{stress} (from \pkg{venneuler}), as well as
 \code{diagError}, and \code{regionError} from \pkg{eulerAPE}.
@@ -131,22 +141,22 @@ where
 }
 \section{Methods (by class)}{
 \itemize{
-\item \code{default}: a named numeric vector, with
+\item \code{euler(default)}: a named numeric vector, with
 combinations separated by an ampersand, for instance \code{A&B = 10}.
 Missing combinations are treated as being 0.
 
-\item \code{data.frame}: a \code{data.frame} of logicals, binary integers, or
+\item \code{euler(data.frame)}: a \code{data.frame} of logicals, binary integers, or
 factors.
 
-\item \code{matrix}: a matrix that can be converted to a data.frame of logicals
+\item \code{euler(matrix)}: a matrix that can be converted to a data.frame of logicals
 (as in the description above) via \code{\link[base:as.data.frame]{base::as.data.frame.matrix()}}.
 
-\item \code{table}: A table with \code{max(dim(x)) < 3}.
+\item \code{euler(table)}: A table with \code{max(dim(x)) < 3}.
 
-\item \code{list}: a list of vectors, each vector giving the contents of
+\item \code{euler(list)}: a list of vectors, each vector giving the contents of
 that set (with no duplicates). Vectors in the list must be named.
-}}
 
+}}
 \examples{
 # Fit a diagram with circles
 combo <- c(A = 2, B = 2, C = 2, "A&B" = 1, "A&C" = 1, "B&C" = 1)
@@ -165,9 +175,11 @@ fit2
 plot(fit2)
 
 # A set with no perfect solution
-euler(c("a" = 3491, "b" = 3409, "c" = 3503,
-        "a&b" = 120, "a&c" = 114, "b&c" = 132,
-        "a&b&c" = 50))
+euler(c(
+  "a" = 3491, "b" = 3409, "c" = 3503,
+  "a&b" = 120, "a&c" = 114, "b&c" = 132,
+  "a&b&c" = 50
+))
 
 
 # Using grouping via the 'by' argument through the data.frame method

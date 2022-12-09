@@ -57,12 +57,7 @@ plot(one_contained,
 russian_doll <- euler(c("A" = 15, "B" = 0, C = 0, 
                         "A&B" = 10, "A&C" = 0, "B&C" = 0,
                         "A&B&C" = 5))
-plot(russian_doll,
-     labels = c(
-       "A long and complicated\nlabel that is likely to have to be repelled",
-       "Another, very\ntall label that\nprobably will intrude\ninto other\nlabels",
-       "The spectacle before us\nwas indeed sublime")
-     )
+plot(russian_doll)
 
 ## -----------------------------------------------------------------------------
 wilkinson <- euler(c(A = 4, B = 6, C = 3, D = 2, E = 7, F = 3,

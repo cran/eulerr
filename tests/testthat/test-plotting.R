@@ -1,5 +1,3 @@
-context("Plotting")
-
 test_that("normal plotting works without errors", {
   tmp <- tempfile()
   png(tmp)
@@ -115,20 +113,6 @@ test_that("plots with euler lists works", {
   expect_silent(plot(f1, legend = TRUE, strips = FALSE))
   expect_silent(plot(f2, strips = list(cex = 2, fontface = "bold")))
   expect_silent(plot(f1))
-
-  dev.off()
-  unlink(tmp)
-})
-
-test_that("label repelling functions", {
-  tmp <- tempfile()
-  png(tmp, width = 150, height = 150)
-
-  set.seed(2112)
-  f1 <- euler(c("very long label that has lots of words in it" = 1,
-                "another long, long label that is sure to overlap" = 1,
-                "very long label that has lots of words in it&another long, long label that is sure to overlap" = 10))
-  expect_silent(plot(f1, adjust_labels = TRUE, quantities = TRUE))
 
   dev.off()
   unlink(tmp)

@@ -11,25 +11,6 @@ Rcpp::Rostream<true>&  Rcpp::Rcout = Rcpp::Rcpp_cout_get();
 Rcpp::Rostream<false>& Rcpp::Rcerr = Rcpp::Rcpp_cerr_get();
 #endif
 
-// repel_boxes
-DataFrame repel_boxes(NumericMatrix boxes, NumericVector xlim, NumericVector ylim, NumericVector hjust, NumericVector vjust, double force_push, double force_pull, int maxiter, std::string direction);
-RcppExport SEXP _eulerr_repel_boxes(SEXP boxesSEXP, SEXP xlimSEXP, SEXP ylimSEXP, SEXP hjustSEXP, SEXP vjustSEXP, SEXP force_pushSEXP, SEXP force_pullSEXP, SEXP maxiterSEXP, SEXP directionSEXP) {
-BEGIN_RCPP
-    Rcpp::RObject rcpp_result_gen;
-    Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< NumericMatrix >::type boxes(boxesSEXP);
-    Rcpp::traits::input_parameter< NumericVector >::type xlim(xlimSEXP);
-    Rcpp::traits::input_parameter< NumericVector >::type ylim(ylimSEXP);
-    Rcpp::traits::input_parameter< NumericVector >::type hjust(hjustSEXP);
-    Rcpp::traits::input_parameter< NumericVector >::type vjust(vjustSEXP);
-    Rcpp::traits::input_parameter< double >::type force_push(force_pushSEXP);
-    Rcpp::traits::input_parameter< double >::type force_pull(force_pullSEXP);
-    Rcpp::traits::input_parameter< int >::type maxiter(maxiterSEXP);
-    Rcpp::traits::input_parameter< std::string >::type direction(directionSEXP);
-    rcpp_result_gen = Rcpp::wrap(repel_boxes(boxes, xlim, ylim, hjust, vjust, force_push, force_pull, maxiter, direction));
-    return rcpp_result_gen;
-END_RCPP
-}
 // intersect_ellipses
 std::vector<double> intersect_ellipses(const std::vector<double>& par, const bool circle, const bool approx);
 RcppExport SEXP _eulerr_intersect_ellipses(SEXP parSEXP, SEXP circleSEXP, SEXP approxSEXP) {
@@ -44,15 +25,17 @@ BEGIN_RCPP
 END_RCPP
 }
 // optim_final_loss
-double optim_final_loss(const std::vector<double>& par, const std::vector<double>& areas, const bool circle);
-RcppExport SEXP _eulerr_optim_final_loss(SEXP parSEXP, SEXP areasSEXP, SEXP circleSEXP) {
+double optim_final_loss(const std::vector<double>& par, const std::vector<double>& data, const bool circle, const std::string& loss_type, const std::string& loss_aggregator_type);
+RcppExport SEXP _eulerr_optim_final_loss(SEXP parSEXP, SEXP dataSEXP, SEXP circleSEXP, SEXP loss_typeSEXP, SEXP loss_aggregator_typeSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
     Rcpp::traits::input_parameter< const std::vector<double>& >::type par(parSEXP);
-    Rcpp::traits::input_parameter< const std::vector<double>& >::type areas(areasSEXP);
+    Rcpp::traits::input_parameter< const std::vector<double>& >::type data(dataSEXP);
     Rcpp::traits::input_parameter< const bool >::type circle(circleSEXP);
-    rcpp_result_gen = Rcpp::wrap(optim_final_loss(par, areas, circle));
+    Rcpp::traits::input_parameter< const std::string& >::type loss_type(loss_typeSEXP);
+    Rcpp::traits::input_parameter< const std::string& >::type loss_aggregator_type(loss_aggregator_typeSEXP);
+    rcpp_result_gen = Rcpp::wrap(optim_final_loss(par, data, circle, loss_type, loss_aggregator_type));
     return rcpp_result_gen;
 END_RCPP
 }
@@ -108,9 +91,8 @@ END_RCPP
 }
 
 static const R_CallMethodDef CallEntries[] = {
-    {"_eulerr_repel_boxes", (DL_FUNC) &_eulerr_repel_boxes, 9},
     {"_eulerr_intersect_ellipses", (DL_FUNC) &_eulerr_intersect_ellipses, 3},
-    {"_eulerr_optim_final_loss", (DL_FUNC) &_eulerr_optim_final_loss, 3},
+    {"_eulerr_optim_final_loss", (DL_FUNC) &_eulerr_optim_final_loss, 5},
     {"_eulerr_optim_init", (DL_FUNC) &_eulerr_optim_init, 4},
     {"_eulerr_choose_two", (DL_FUNC) &_eulerr_choose_two, 1},
     {"_eulerr_discdisc", (DL_FUNC) &_eulerr_discdisc, 4},

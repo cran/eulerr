@@ -1,38 +1,44 @@
-#define ARMA_NO_DEBUG
+// #define ARMA_NO_DEBUG
 
 #include <RcppArmadillo.h>
 
 // Computes the loss, gradient, and hessian simultaneously. For use with nlm()
 // [[Rcpp::export]]
-Rcpp::NumericVector optim_init(const Rcpp::NumericVector& par,
-                               const Rcpp::NumericMatrix& d,
-                               const Rcpp::LogicalMatrix& disjoint,
-                               const Rcpp::LogicalMatrix& subset)
+Rcpp::NumericVector
+optim_init(const Rcpp::NumericVector& par,
+           const Rcpp::NumericMatrix& d,
+           const Rcpp::LogicalMatrix& disjoint,
+           const Rcpp::LogicalMatrix& subset)
 {
-  auto n = par.size()/2;
+  auto n = par.size() / 2;
+
   const Rcpp::NumericVector x = Rcpp::head(par, n);
   const Rcpp::NumericVector y = Rcpp::tail(par, n);
 
   double loss = 0;
-  Rcpp::NumericVector grad(2*n, 0.0);
-  // Rcpp::NumericMatrix hess(2*n, 2*n);
+  Rcpp::NumericVector grad(2 * n, 0.0);
 
-  for (decltype(n) i = 0; i < (n - 1); ++i) {
-    for (decltype(n) j = i + 1; j < n; ++j) {
-      double xd = x(j) - x(i);
-      double yd = y(j) - y(i);
-      double D = xd*xd + yd*yd - d(j, i)*d(j, i);
-      if ((disjoint(j, i) && (D >= 0.0)) || (subset(j, i) && (D < 0.0))) {
+  for (decltype(n) i = 0; i < n; ++i) {
+    for (decltype(n) j = 0; j < n; ++j) {
+      if (i == j) {
+        continue;
+      }
+
+      double xd = x(i) - x(j);
+      double yd = y(i) - y(j);
+      double D  = std::pow(xd, 2) + std::pow(yd, 2) - std::pow(d(i, j), 2);
+
+      if ((disjoint(i, j) && (D >= 0.0))) {
+        continue;
+      } else if (subset(i, j) && (D <= 0)) {
         continue;
       } else {
         // Loss
-        loss += D*D;
+        loss += std::pow(D, 2);
 
         // Gradient
-        grad[j]     += 4.0*xd*D;
-        grad[i]     -= 4.0*xd*D;
-        grad[j + n] += 4.0*yd*D;
-        grad[i + n] -= 4.0*yd*D;
+        grad[i] += 4.0 * xd * D;
+        grad[i + n] += 4.0 * yd * D;
 
         // // Upper left hessian
         // hess(j, j) += 4.0*D + 8.0*xd*xd;
