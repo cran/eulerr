@@ -1,5 +1,11 @@
 # Changelog
 
+## eulerr 7.0.2
+
+### Bug Fixes
+
+- Fix order and layout of strips when grouping (#108, by @altairwei)
+
 ## eulerr 7.0.1
 
 ### Minor Changes
@@ -31,7 +37,7 @@
 - citation to conference paper added to `inst/CITATION`
 - error messages for erroneous input have been improved in several places
 - switched `PI` to `M_PI` to support `STRICT_R_HEADERS` in C++ code
-  (##82, thanks @eddelbuettel)
+  (#82, thanks @eddelbuettel)
 
 ### Bug fixes
 
