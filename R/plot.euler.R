@@ -24,7 +24,7 @@
 #' The various [grid::gpar()] values that are available for each argument
 #' are:
 #'
-#' \tabular{lccccccccc}{
+#' \tabular{lccccccc}{
 #'              \tab fills \tab edges \tab labels \tab quantities  \tab strips \tab legend \tab main \cr
 #'   col        \tab       \tab x     \tab x      \tab x           \tab x      \tab x      \tab x    \cr
 #'   fill       \tab x     \tab       \tab        \tab             \tab        \tab        \tab      \cr
@@ -53,7 +53,14 @@
 #' @param x an object of class `'euler'`, generated from [euler()]
 #' @param fills a logical, vector, or list of graphical parameters for the fills
 #'   in the diagram. Vectors are assumed to be colors for the fills.
-#'   See [grid::grid.path()].
+#'   See [grid::grid.path()]. Named fill vectors can be matched in
+#'   `fills$mode = "disjoint"` (default) or `fills$mode = "union"`.
+#' @param patterns a logical, vector, or list of graphical parameters for
+#'   fill patterns in the diagram. Vectors are assumed to be pattern types
+#'   (currently `"stripes"` or `NA`), where `NA` means no pattern.
+#'   Supported list items are `type`, `angle`, `col`, `lwd`, and `alpha`.
+#'   Named pattern vectors can be matched in
+#'   `patterns$mode = "disjoint"` (default) or `patterns$mode = "union"`.
 #' @param edges a logical, vector, or list of graphical parameters for the edges
 #'   in the diagram. Vectors are assumed to be colors for the edges.
 #'   See [grid::grid.polyline()].
@@ -65,13 +72,24 @@
 #' @param quantities a logical, vector, or list. Vectors are assumed to be
 #'   text for the quantities' labels, which by
 #'   default are the original values in the input to [euler()]. In addition
+#'   to plain vectors, `quantities$labels` can also be a named vector keyed by
+#'   subset names (e.g., `"A"`, `"B"`, `"A&B"`), which is useful for supplying
+#'   custom text for overlap regions. If `quantities$labels` is `NULL`,
+#'   `quantities$format` can be used to control number formatting as a list with
+#'   an item `fun` (a function such as [signif()] or [round()]) and optional
+#'   extra arguments passed to that function (for example,
+#'   `list(fun = prettyNum, big.mark = ",")`). `quantities$total` can be used to
+#'   set an external
+#'   denominator for percent/fraction quantities (instead of the plotted total).
 #'   to arguments that apply to [grid::grid.text()], an argument `type` may
-#'   also be used which should be a combination of `"counts"` and
-#'   `"percent"`. The first item will be printed first and the second
+#'   also be used which should be a combination of `"counts"`, `"percent"`,
+#'   and `"fraction"`. The first item will be printed first and the second
 #'   will be printed thereafter inside brackets. The default is
 #'   `type = "counts"`.
 #' @param strips a list, ignored unless the `'by'` argument
 #'   was used in [euler()]
+#' @param bg a logical, character, or list controlling the background grob.
+#'   Character values are interpreted as the background fill color.
 #' @param n number of vertices for the `edges` and `fills`
 #' @param main a title for the plot in the form of a
 #'   character, expression, list or something that can be
@@ -119,11 +137,13 @@
 plot.euler <- function(
   x,
   fills = TRUE,
+  patterns = FALSE,
   edges = TRUE,
   legend = FALSE,
   labels = identical(legend, FALSE),
   quantities = FALSE,
   strips = NULL,
+  bg = FALSE,
   main = NULL,
   n = 200L,
   adjust_labels = TRUE,
@@ -137,17 +157,20 @@ plot.euler <- function(
   opar <- eulerr_options()
 
   groups <- attr(x, "groups")
+  fills_user <- fills
   dots <- list(...)
 
   do_custom_legend <- grid::is.grob(legend)
 
   do_fills <- !is_false(fills) && !is.null(fills)
+  do_patterns <- !is_false(patterns) && !is.null(patterns)
   do_edges <- !is_false(edges) && !is.null(edges)
   do_labels <- !is_false(labels) && !is.null(labels)
   do_quantities <- !is_false(quantities) && !is.null(quantities)
   do_legend <- !is_false(legend) && !is.null(legend)
   do_groups <- !is.null(groups)
   do_strips <- !is_false(strips) && do_groups
+  do_bg <- !is_false(bg) && !is.null(bg)
   do_main <- is.character(main) || is.expression(main) || is.list(main)
 
   ellipses <- if (do_groups) x[[1L]]$ellipses else x$ellipses
@@ -157,6 +180,8 @@ plot.euler <- function(
   id <- bit_indexr(n_e)
 
   setnames <- rownames(ellipses)
+  colnames(id) <- setnames
+  rownames(id) <- apply(id, 1L, function(i) paste(setnames[i], collapse = "&"))
 
   if (do_groups) {
     res <- lapply(x, function(xi) is.na(xi$ellipses)[, 1L])
@@ -208,10 +233,16 @@ plot.euler <- function(
 
   stopifnot(n > 0, is.numeric(n) && length(n) == 1)
 
+  fills_out <- NULL
+
   # setup fills
   if (do_fills) {
     fills_out <- replace_list(
-      list(fill = opar$fills$fill, alpha = opar$fills$alpha),
+      list(
+        fill = opar$fills$fill,
+        alpha = opar$fills$alpha,
+        mode = opar$fills$mode
+      ),
       if (is.list(fills)) {
         fills
       } else if (isTRUE(fills)) {
@@ -227,16 +258,291 @@ plot.euler <- function(
       fills_out$fill <- fills_out$fill(n_e)
     }
 
+    fill_names <- names(fills_out$fill)
+    if (!is.null(fill_names)) {
+      all_named <- all(nzchar(fill_names))
+      any_named <- any(nzchar(fill_names))
+      if (any_named && !all_named) {
+        stop("`fills$fill` must be either fully named or fully unnamed.")
+      }
+      if (all_named) {
+        if (!fills_out$mode %in% c("disjoint", "union")) {
+          stop("`fills$mode` must be either 'disjoint' or 'union'.")
+        }
+        subset_names <- rownames(id)
+        valid_fill_names <- c(setnames, subset_names)
+        unknown <- setdiff(fill_names, valid_fill_names)
+        if (length(unknown) > 0L) {
+          stop(
+            "`fills$fill` has unknown names: ",
+            paste(unknown, collapse = ", ")
+          )
+        }
+
+        default_fill <- opar$fills$fill
+        if (is.function(default_fill)) {
+          default_fill <- default_fill(n_e)
+        }
+        n_default <- length(default_fill)
+        if (n_default == n_e && n_default < n_id) {
+          default_map <- rep(NA_character_, n_id)
+          default_map[seq_len(n_e)] <- default_fill
+          for (ii in (n_e + 1L):n_id) {
+            default_map[ii] <- mix_colors(default_map[which(id[ii, ])])
+          }
+          default_fill <- default_map
+        } else if (n_default == 1L || n_default == n_id) {
+          default_fill <- rep_len(default_fill, n_id)
+        } else {
+          stop("Default `fills$fill` must have length 1, n_sets, or n_subsets.")
+        }
+
+        fill_map <- default_fill
+        names(fill_map) <- subset_names
+        named_sets <- intersect(fill_names, setnames)
+        if (identical(fills_out$mode, "union") && length(named_sets) > 0L) {
+          for (set_name in named_sets) {
+            fill_map[id[, set_name]] <- fills_out$fill[[set_name]]
+          }
+        }
+        named_subsets <- intersect(fill_names, subset_names)
+        fill_map[named_subsets] <- unname(fills_out$fill[named_subsets])
+        fills_out$fill <- fill_map
+      }
+    }
+
     n_fills <- length(fills_out$fill)
-    if (n_fills < n_id) {
+    if (n_fills == n_e && n_fills < n_id) {
       for (i in (n_fills + 1L):n_id) {
         fills_out$fill[i] <- mix_colors(fills_out$fill[which(id[i, ])])
       }
+    } else if (!(n_fills %in% c(1L, n_id))) {
+      stop("`fills$fill` must have length 1, n_sets, or n_subsets.")
     }
     fills <- list()
-    fills$gp <- setup_gpar(fills_out, list(), n_id)
+    fills_gp <- fills_out
+    fills_gp$mode <- NULL
+    fills$gp <- setup_gpar(fills_gp, list(), n_id)
   } else {
     fills <- NULL
+  }
+
+  legacy_patterns <- list(
+    type = if (is.list(fills_user) && !is.null(fills_user$pattern)) {
+      fills_user$pattern
+    } else {
+      NULL
+    },
+    angle = if (is.list(fills_user) && !is.null(fills_user$angle)) {
+      fills_user$angle
+    } else {
+      NULL
+    },
+    col = if (is.list(fills_user) && !is.null(fills_user$pattern_col)) {
+      fills_user$pattern_col
+    } else {
+      NULL
+    },
+    lwd = if (is.list(fills_user) && !is.null(fills_user$pattern_lwd)) {
+      fills_user$pattern_lwd
+    } else {
+      NULL
+    }
+  )
+  do_legacy_patterns <- any(!vapply(legacy_patterns, is.null, logical(1)))
+  do_patterns <- do_patterns || do_legacy_patterns
+
+  # setup patterns
+  if (do_patterns && !do_fills) {
+    stop("`patterns` requires `fills` to be enabled.")
+  }
+
+  if (do_patterns) {
+    patterns_out <- replace_list(
+      list(
+        type = opar$patterns$type,
+        angle = opar$patterns$angle,
+        col = opar$patterns$col,
+        lwd = opar$patterns$lwd,
+        alpha = opar$patterns$alpha,
+        mode = opar$patterns$mode
+      ),
+      if (is.list(patterns)) {
+        patterns
+      } else if (isTRUE(patterns)) {
+        list(type = "stripes")
+      } else {
+        list(type = patterns)
+      }
+    )
+
+    if (do_legacy_patterns) {
+      warning(
+        "`fills$pattern`, `fills$angle`, `fills$pattern_col`, and ",
+        "`fills$pattern_lwd` are deprecated; use `patterns` instead."
+      )
+      if (!is.null(legacy_patterns$type)) {
+        patterns_out$type <- legacy_patterns$type
+      }
+      if (!is.null(legacy_patterns$angle)) {
+        patterns_out$angle <- legacy_patterns$angle
+      }
+      if (!is.null(legacy_patterns$col)) {
+        patterns_out$col <- legacy_patterns$col
+      }
+      if (!is.null(legacy_patterns$lwd)) patterns_out$lwd <- legacy_patterns$lwd
+    }
+
+    patterns_out <- replace_list(patterns_out, dots)
+
+    pattern_type_names <- names(patterns_out$type)
+    if (!is.null(pattern_type_names)) {
+      all_named <- all(nzchar(pattern_type_names))
+      any_named <- any(nzchar(pattern_type_names))
+      if (any_named && !all_named) {
+        stop("`patterns$type` must be either fully named or fully unnamed.")
+      }
+      if (all_named) {
+        if (!patterns_out$mode %in% c("disjoint", "union")) {
+          stop("`patterns$mode` must be either 'disjoint' or 'union'.")
+        }
+        subset_names <- rownames(id)
+        valid_pattern_names <- c(setnames, subset_names)
+        unknown <- setdiff(pattern_type_names, valid_pattern_names)
+        if (length(unknown) > 0L) {
+          stop(
+            "`patterns$type` has unknown names: ",
+            paste(unknown, collapse = ", ")
+          )
+        }
+        named_sets <- intersect(pattern_type_names, setnames)
+        named_subsets <- intersect(pattern_type_names, subset_names)
+
+        if (identical(patterns_out$mode, "union") &&
+          all(pattern_type_names %in% setnames)) {
+          set_default <- rep_len(opar$patterns$type, n_e)
+          names(set_default) <- setnames
+          set_default[named_sets] <- unname(patterns_out$type[named_sets])
+          patterns_out$type <- unname(set_default)
+        } else {
+          default_type <- opar$patterns$type
+          n_default <- length(default_type)
+          if (n_default == n_e && n_default < n_id) {
+            default_map <- rep(NA_character_, n_id)
+            default_map[seq_len(n_e)] <- default_type
+            default_type <- default_map
+          } else if (n_default == 1L || n_default == n_id) {
+            default_type <- rep_len(default_type, n_id)
+          } else {
+            stop("Default `patterns$type` must have length 1, n_sets, or n_subsets.")
+          }
+
+          type_map <- default_type
+          names(type_map) <- subset_names
+          if (identical(patterns_out$mode, "union") && length(named_sets) > 0L) {
+            for (set_name in named_sets) {
+              type_map[id[, set_name]] <- patterns_out$type[[set_name]]
+            }
+          }
+          type_map[named_subsets] <- unname(patterns_out$type[named_subsets])
+          patterns_out$type <- type_map
+        }
+      }
+    }
+
+    expand_pattern_param <- function(x, name, by_set, default = NULL) {
+      n_x <- length(x)
+      if (!(n_x %in% c(1L, n_e, n_id))) {
+        stop("`patterns$", name, "` must have length 1, n_sets, or n_subsets.")
+      }
+      if (n_x == 1L || n_x == n_id) {
+        return(rep_len(x, n_id))
+      }
+
+      out <- vector(mode = mode(x), length = n_id)
+      for (ii in seq_len(n_id)) {
+        active <- which(id[ii, ] & by_set)
+        if (length(active) == 0L) {
+          if (is.null(default)) {
+            out[ii] <- x[1L]
+          } else if (is.character(default)) {
+            out[ii] <- default[1L]
+          } else {
+            out[ii] <- as.vector(default)[1L]
+          }
+        } else if (is.character(x)) {
+          out[ii] <- if (length(active) == 1L) {
+            x[active]
+          } else {
+            mix_colors(x[active])
+          }
+        } else {
+          out[ii] <- mean(x[active])
+        }
+      }
+      out
+    }
+
+    n_types <- length(patterns_out$type)
+    if (!(n_types %in% c(1L, n_e, n_id))) {
+      stop("`patterns$type` must have length 1, n_sets, or n_subsets.")
+    }
+
+    if (n_types %in% c(1L, n_id)) {
+      pattern_mode <- "intersection"
+      patterns_out$type <- rep_len(patterns_out$type, n_id)
+      patterns_out$angle <- expand_pattern_param(patterns_out$angle, "angle", rep(TRUE, n_e))
+      patterns_out$col <- expand_pattern_param(patterns_out$col, "col", rep(TRUE, n_e), default = NA_character_)
+      patterns_out$lwd <- expand_pattern_param(patterns_out$lwd, "lwd", rep(TRUE, n_e))
+      patterns_out$alpha <- expand_pattern_param(patterns_out$alpha, "alpha", rep(TRUE, n_e))
+    } else {
+      pattern_mode <- "shape"
+      patterns_out$type <- tolower(patterns_out$type)
+      patterns_out$angle <- rep_len(patterns_out$angle, n_e)
+      patterns_out$col <- rep_len(patterns_out$col, n_e)
+      patterns_out$lwd <- rep_len(patterns_out$lwd, n_e)
+      patterns_out$alpha <- rep_len(patterns_out$alpha, n_e)
+    }
+
+    patterns <- list()
+    patterns$mode <- pattern_mode
+
+    if (pattern_mode == "intersection") {
+      patterns_out$type[is.na(patterns_out$type)] <- "none"
+      patterns_out$type <- tolower(patterns_out$type)
+
+      if (any(!patterns_out$type %in% c("none", "stripes"))) {
+        stop("`patterns$type` must be one of: 'stripes', NA.")
+      }
+
+      if (all(is.na(patterns_out$col))) {
+        patterns_out$col <- fills$gp$fill
+      } else {
+        na_col <- is.na(patterns_out$col) | patterns_out$col == "NA"
+        patterns_out$col[na_col] <- fills$gp$fill[na_col]
+      }
+
+      patterns_gp <- patterns_out
+      patterns_gp$mode <- NULL
+      patterns$gp <- setup_gpar(patterns_gp, list(), n_id)
+    } else {
+      patterns_out$type[is.na(patterns_out$type)] <- "none"
+      if (any(!patterns_out$type %in% c("none", "stripes"))) {
+        stop("`patterns$type` must be one of: 'stripes', NA.")
+      }
+      if (all(is.na(patterns_out$col))) {
+        patterns_out$col <- fills$gp$fill[seq_len(n_e)]
+      } else {
+        na_col <- is.na(patterns_out$col) | patterns_out$col == "NA"
+        patterns_out$col[na_col] <- fills$gp$fill[which(na_col)]
+      }
+      patterns_set_gp <- patterns_out
+      patterns_set_gp$mode <- NULL
+      patterns$set_gp <- setup_gpar(patterns_set_gp, list(), n_e)
+      patterns$gp <- patterns$set_gp
+    }
+  } else {
+    patterns <- NULL
   }
 
   # setup edges
@@ -313,15 +619,41 @@ plot.euler <- function(
 
   # setup quantities
   if (do_quantities) {
+    normalize_quantity_formatter <- function(formatter) {
+      if (is.null(formatter)) {
+        formatter <- list()
+      }
+
+      if (!is.list(formatter)) {
+        stop("`quantities$format` must be a list.")
+      }
+
+      if (is.null(formatter$fun)) {
+        fun <- NULL
+      } else {
+        fun <- formatter$fun
+      }
+
+      if (!is.null(fun) && !is.function(fun)) {
+        stop("`quantities$format$fun` must be a function.")
+      }
+
+      args <- formatter[setdiff(names(formatter), "fun")]
+      list(fun = fun, args = args)
+    }
+
     if (is.list(quantities)) {
       if (!is.null(quantities$type)) {
-        if (!all(quantities$type %in% c("counts", "percent"))) {
-          stop("'type' must be one or both of 'counts' and 'percent")
+        quantities$type[quantities$type == "numbers"] <- "counts"
+        if (!all(quantities$type %in% c("counts", "percent", "fraction"))) {
+          stop(
+            "'type' must be one or more of 'counts', 'percent', and 'fraction'"
+          )
         }
 
         quantities_type <- match.arg(
           quantities$type,
-          c("counts", "percent"),
+          c("counts", "percent", "fraction"),
           several.ok = TRUE
         )
       } else {
@@ -329,14 +661,57 @@ plot.euler <- function(
       }
 
       quantities <- update_list(
-        list(labels = NULL, type = quantities_type, rot = opar$quantities$rot),
+        list(
+          labels = NULL,
+          type = quantities_type,
+          rot = opar$quantities$rot,
+          format = NULL,
+          total = NULL
+        ),
         quantities
       )
     } else if (isTRUE(quantities)) {
-      quantities <- list(labels = NULL, rot = opar$quantities$rot)
+      quantities <- list(
+        labels = NULL,
+        type = opar$quantities$type,
+        rot = opar$quantities$rot,
+        format = NULL,
+        total = NULL
+      )
     } else {
-      quantities <- list(labels = quantities, rot = opar$quantities$rot)
+      quantities <- list(
+        labels = quantities,
+        type = opar$quantities$type,
+        rot = opar$quantities$rot,
+        format = NULL,
+        total = NULL
+      )
     }
+
+    quantities$type[quantities$type == "numbers"] <- "counts"
+    quantities$format <- normalize_quantity_formatter(quantities$format)
+
+    if (!is.null(quantities$labels)) {
+      lbl_names <- names(quantities$labels)
+      if (!is.null(lbl_names)) {
+        all_named <- all(nzchar(lbl_names))
+        any_named <- any(nzchar(lbl_names))
+        if (any_named && !all_named) {
+          stop("`quantities$labels` must be either fully named or fully unnamed.")
+        }
+      }
+    }
+
+    if (
+      !is.null(quantities$total) &&
+        (!is.numeric(quantities$total) ||
+          length(quantities$total) != 1 ||
+          is.na(quantities$total) ||
+          quantities$total <= 0)
+    ) {
+      stop("`quantities$total` must be a single positive number.")
+    }
+
     quantities$rot <- rep_len(quantities$rot, n_id)
 
     quantities$gp <- setup_gpar(
@@ -403,6 +778,31 @@ plot.euler <- function(
           edges$gp$col[!empty_sets & !merged_sets]
         } else {
           "transparent"
+        },
+        pattern_type = if (do_patterns) {
+          patterns$gp$type[!empty_sets & !merged_sets]
+        } else {
+          "none"
+        },
+        pattern_angle = if (do_patterns) {
+          patterns$gp$angle[!empty_sets & !merged_sets]
+        } else {
+          45
+        },
+        pattern_col = if (do_patterns) {
+          patterns$gp$col[!empty_sets & !merged_sets]
+        } else {
+          "transparent"
+        },
+        pattern_lwd = if (do_patterns) {
+          patterns$gp$lwd[!empty_sets & !merged_sets]
+        } else {
+          0
+        },
+        pattern_alpha = if (do_patterns) {
+          patterns$gp$alpha[!empty_sets & !merged_sets]
+        } else {
+          0
         }
       ),
       legend,
@@ -459,6 +859,23 @@ plot.euler <- function(
     main <- NULL
   }
 
+  if (do_bg) {
+    if (isTRUE(bg)) {
+      bg <- list()
+    } else if (!is.list(bg)) {
+      bg <- list(fill = bg)
+    }
+
+    bg_grob <- grid::rectGrob(
+      gp = setup_gpar(
+        list(fill = "white", col = "transparent", alpha = 1),
+        bg,
+        1
+      ),
+      name = "bg.grob"
+    )
+  }
+
   # set up geometry for diagrams
   if (do_groups) {
     data <- lapply(
@@ -494,6 +911,7 @@ plot.euler <- function(
       euler_grob_children[[i]] <- setup_grobs(
         data[[i]],
         fills = fills,
+        patterns = patterns,
         edges = edges,
         labels = labels,
         quantities = quantities,
@@ -517,6 +935,7 @@ plot.euler <- function(
     euler_grob <- setup_grobs(
       data,
       fills = fills,
+      patterns = patterns,
       edges = edges,
       labels = labels,
       quantities = quantities,
@@ -648,6 +1067,9 @@ plot.euler <- function(
         pch = legend$pch,
         gp = legend$gp
       )
+      if (do_patterns) {
+        legend_grob <- add_legend_patterns(legend_grob, legend$gp)
+      }
     }
 
     legend_grob$name <- "legend.grob"
@@ -771,6 +1193,7 @@ plot.euler <- function(
 
   # return a gTree object
   children <- gList(
+    if (do_bg) bg_grob = bg_grob,
     if (do_main) main_grob = main_grob,
     if (do_strip_top) strip_top_grob = strip_top_grob,
     if (do_strip_left) strip_left_grob = strip_left_grob,
@@ -847,16 +1270,105 @@ locate_centers <- function(p, precision = 1) {
   }
 }
 
+add_legend_patterns <- function(legend_grob, gp) {
+  point_cells <- which(vapply(
+    legend_grob$children,
+    function(cell) {
+      inherits(cell$children[[1]], "points") ||
+        inherits(cell$children[[1]], "gTree")
+    },
+    logical(1)
+  ))
+
+  if (length(point_cells) == 0L) {
+    return(legend_grob)
+  }
+
+  for (i in seq_along(point_cells)) {
+    t <- seq(0, 2 * pi, length.out = 64)
+    circle <- list(
+      x = 0.5 + 0.48 * cos(t),
+      y = 0.5 + 0.48 * sin(t)
+    )
+
+    cell <- legend_grob$children[[point_cells[i]]]
+    point_vp <- cell$children[[1]]$vp
+
+    base_symbol <- grid::pathGrob(
+      x = circle$x,
+      y = circle$y,
+      default.units = "npc",
+      gp = grid::gpar(
+        fill = gp$fill[i],
+        col = gp$col[i],
+        lwd = gp$lwd[i],
+        lex = gp$lex[i],
+        alpha = gp$alpha[i]
+      )
+    )
+
+    symbol_children <- grid::gList(base_symbol)
+
+    if (gp$pattern_type[i] == "stripes") {
+      pcol <- gp$pattern_col[i]
+      if (is.na(pcol)) {
+        pcol <- gp$fill[i]
+      }
+
+      clipped <- apply_stripe_pattern(
+        fill_data = list(
+          x = circle$x,
+          y = circle$y,
+          id.lengths = length(circle$x)
+        ),
+        pattern_gp = list(
+          type = "stripes",
+          angle = gp$pattern_angle[i],
+          col = pcol,
+          lwd = gp$pattern_lwd[i],
+          alpha = gp$pattern_alpha[i]
+        ),
+        spacing_scale = 3
+      )
+
+      if (!is.null(clipped)) {
+        stripe_grob <- grid::pathGrob(
+          x = unlist(lapply(clipped, "[[", "x"), use.names = FALSE),
+          y = unlist(lapply(clipped, "[[", "y"), use.names = FALSE),
+          id.lengths = lengths(lapply(clipped, "[[", "x")),
+          default.units = "npc",
+          gp = grid::gpar(
+            fill = pcol,
+            col = "transparent",
+            alpha = gp$pattern_alpha[i]
+          )
+        )
+        symbol_children <- grid::gList(base_symbol, stripe_grob)
+      }
+    }
+
+    cell$children[[1]] <- grid::grobTree(
+      children = symbol_children,
+      vp = point_vp
+    )
+    legend_grob$children[[point_cells[i]]] <- cell
+  }
+
+  legend_grob
+}
+
 #' @rdname plot.euler
 #' @export
-plot.venn <- function(
+plot.eulerr_venn <- function(
   x,
   fills = TRUE,
+  patterns = FALSE,
   edges = TRUE,
   legend = FALSE,
   labels = identical(legend, FALSE),
   quantities = TRUE,
   strips = NULL,
+  bg = FALSE,
   main = NULL,
   n = 200L,
   adjust_labels = TRUE,
@@ -866,7 +1378,30 @@ plot.venn <- function(
     warning("`adjust_labels` is deprecated and no longer has any effect.")
   }
 
-  NextMethod("plot", ..., quantities = quantities)
+  plot.euler(
+    x = x,
+    fills = fills,
+    patterns = patterns,
+    edges = edges,
+    legend = legend,
+    labels = labels,
+    quantities = quantities,
+    strips = strips,
+    bg = bg,
+    main = main,
+    n = n,
+    ...
+  )
+}
+
+#' @rdname plot.euler
+#' @export
+plot.venn <- function(...) {
+  warning(
+    "`plot.venn()` is deprecated and will be removed in a future release. ",
+    "Use `plot()` on objects from `venn()` instead."
+  )
+  plot.eulerr_venn(...)
 }
 
 #' Print (plot) Euler diagram

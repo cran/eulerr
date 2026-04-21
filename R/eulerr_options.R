@@ -10,11 +10,12 @@
 #'   \item{pointsize}{size in pts to be used as basis for fontsizes and
 #'   some margin sizes in the resulting plot}#'
 #'   \item{fills}{a list of items `fill` and `alpha`}
+#'   \item{patterns}{a list of items `type`, `angle`, `col`, `lwd`, and `alpha`}
 #'   \item{edges}{a list of items `col`, `alpha`, `lex`, `lwd`, and `lty`}
 #'   \item{labels}{a list of items `rot`,
 #'   `col`, `alpha`, `fontsize`, `cex`, `fontfamily`, `fontface`,
 #'   `lineheight`, and `font`}
-#'   \item{quantities}{a list of items `type`, `rot`,
+#'   \item{quantities}{a list of items `type`, `format`, `total`, `rot`,
 #'   `col`, `alpha`, `fontsize`, `cex`, `fontfamily`,
 #'   `lineheight`, and `font`}
 #'   \item{strips}{`col`, `alpha`, `fontsize`, `cex`, `fontfamily`,
@@ -101,7 +102,17 @@ eulerr_default_options <- function() {
           "lightgoldenrod"
         )[seq_len(n)]
       },
-      alpha = 1
+      alpha = 1,
+      mode = "disjoint"
+    ),
+    patterns = list(
+      type = NA_character_,
+      angle = 45,
+      col = 1L,
+      lwd = 0.5,
+      alpha = 1,
+      lex = 1,
+      mode = "disjoint"
     ),
     edges = list(
       col = 1L,
@@ -121,7 +132,9 @@ eulerr_default_options <- function() {
       font = 2
     ),
     quantities = list(
-      type = "numbers",
+      type = "counts",
+      format = NULL,
+      total = NULL,
       rot = 0,
       col = 1L,
       alpha = 1,

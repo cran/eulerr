@@ -2,43 +2,58 @@
 % Please edit documentation in R/plot.euler.R
 \name{plot.euler}
 \alias{plot.euler}
+\alias{plot.eulerr_venn}
 \alias{plot.venn}
 \title{Plot Euler and Venn diagrams}
 \usage{
 \method{plot}{euler}(
   x,
   fills = TRUE,
+  patterns = FALSE,
   edges = TRUE,
   legend = FALSE,
   labels = identical(legend, FALSE),
   quantities = FALSE,
   strips = NULL,
+  bg = FALSE,
   main = NULL,
   n = 200L,
   adjust_labels = TRUE,
   ...
 )
 
-\method{plot}{venn}(
+\method{plot}{eulerr_venn}(
   x,
   fills = TRUE,
+  patterns = FALSE,
   edges = TRUE,
   legend = FALSE,
   labels = identical(legend, FALSE),
   quantities = TRUE,
   strips = NULL,
+  bg = FALSE,
   main = NULL,
   n = 200L,
   adjust_labels = TRUE,
   ...
 )
+
+\method{plot}{venn}(...)
 }
 \arguments{
 \item{x}{an object of class \code{'euler'}, generated from \code{\link[=euler]{euler()}}}
 
 \item{fills}{a logical, vector, or list of graphical parameters for the fills
 in the diagram. Vectors are assumed to be colors for the fills.
-See \code{\link[grid:grid.path]{grid::grid.path()}}.}
+See \code{\link[grid:grid.path]{grid::grid.path()}}. Named fill vectors can be matched in
+\code{fills$mode = "disjoint"} (default) or \code{fills$mode = "union"}.}
+
+\item{patterns}{a logical, vector, or list of graphical parameters for
+fill patterns in the diagram. Vectors are assumed to be pattern types
+(currently \code{"stripes"} or \code{NA}), where \code{NA} means no pattern.
+Supported list items are \code{type}, \code{angle}, \code{col}, \code{lwd}, and \code{alpha}.
+Named pattern vectors can be matched in
+\code{patterns$mode = "disjoint"} (default) or \code{patterns$mode = "union"}.}
 
 \item{edges}{a logical, vector, or list of graphical parameters for the edges
 in the diagram. Vectors are assumed to be colors for the edges.
@@ -54,14 +69,26 @@ text for the labels. See \code{\link[grid:grid.text]{grid::grid.text()}}.}
 \item{quantities}{a logical, vector, or list. Vectors are assumed to be
 text for the quantities' labels, which by
 default are the original values in the input to \code{\link[=euler]{euler()}}. In addition
+to plain vectors, \code{quantities$labels} can also be a named vector keyed by
+subset names (e.g., \code{"A"}, \code{"B"}, \code{"A&B"}), which is useful for supplying
+custom text for overlap regions. If \code{quantities$labels} is \code{NULL},
+\code{quantities$format} can be used to control number formatting as a list with
+an item \code{fun} (a function such as \code{\link[=signif]{signif()}} or \code{\link[=round]{round()}}) and optional
+extra arguments passed to that function (for example,
+\code{list(fun = prettyNum, big.mark = ",")}). \code{quantities$total} can be used to
+set an external
+denominator for percent/fraction quantities (instead of the plotted total).
 to arguments that apply to \code{\link[grid:grid.text]{grid::grid.text()}}, an argument \code{type} may
-also be used which should be a combination of \code{"counts"} and
-\code{"percent"}. The first item will be printed first and the second
+also be used which should be a combination of \code{"counts"}, \code{"percent"},
+and \code{"fraction"}. The first item will be printed first and the second
 will be printed thereafter inside brackets. The default is
 \code{type = "counts"}.}
 
 \item{strips}{a list, ignored unless the \code{'by'} argument
 was used in \code{\link[=euler]{euler()}}}
+
+\item{bg}{a logical, character, or list controlling the background grob.
+Character values are interpreted as the background fill color.}
 
 \item{main}{a title for the plot in the form of a
 character, expression, list or something that can be
@@ -112,7 +139,7 @@ arguments that are specific to each argument.
 The various \code{\link[grid:gpar]{grid::gpar()}} values that are available for each argument
 are:
 
-\tabular{lccccccccc}{
+\tabular{lccccccc}{
 \tab fills \tab edges \tab labels \tab quantities  \tab strips \tab legend \tab main \cr
 col        \tab       \tab x     \tab x      \tab x           \tab x      \tab x      \tab x    \cr
 fill       \tab x     \tab       \tab        \tab             \tab        \tab        \tab      \cr

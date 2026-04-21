@@ -1,6 +1,6 @@
 Package: eulerr
 Title: Area-Proportional Euler and Venn Diagrams with Ellipses
-Version: 7.0.4
+Version: 7.1.0
 Authors@R: c(person("Johan", "Larsson", email = "johanlarsson@outlook.com",
                     role = c("aut", "cre"),
                     comment = c(ORCID = "0000-0002-4029-5945")),
@@ -28,10 +28,10 @@ LazyData: true
 VignetteBuilder: knitr
 URL: https://github.com/jolars/eulerr, https://jolars.github.io/eulerr/
 BugReports: https://github.com/jolars/eulerr/issues
-RoxygenNote: 7.2.3
+RoxygenNote: 7.3.3
 Language: en-US
 NeedsCompilation: yes
-Packaged: 2025-09-23 20:31:24 UTC; jola
+Packaged: 2026-04-20 19:36:20 UTC; jola
 Author: Johan Larsson [aut, cre] (ORCID:
     <https://orcid.org/0000-0002-4029-5945>),
   A. Jonathan R. Godfrey [ctb],
@@ -41,4 +41,4 @@ Author: Johan Larsson [aut, cre] (ORCID:
   Florian Privé [ctb]
 Maintainer: Johan Larsson <johanlarsson@outlook.com>
 Repository: CRAN
-Date/Publication: 2025-09-24 05:11:07 UTC
+Date/Publication: 2026-04-21 05:10:28 UTC
