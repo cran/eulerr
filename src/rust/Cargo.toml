@@ -1,0 +1,18 @@
+[package]
+name = "eulerr"
+publish = false
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.91.1"
+
+[lib]
+crate-type = ["staticlib"]
+name = "eulerr"
+
+[dependencies]
+extendr-api = "0.9"
+eunoia = "0.16.1"
+
+[profile.release]
+lto = true
+codegen-units = 1

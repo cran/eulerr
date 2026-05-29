@@ -10,8 +10,12 @@
 #' @inheritParams euler
 #'
 #' @return Returns an object of class `'eulerr_venn', 'venn', 'euler'` with items
-#'   \item{ellipses}{a matrix of `h` and `k` (x and y-coordinates for the
-#'     centers of the shapes), semiaxes `a` and `b`, and rotation angle `phi`}
+#'   \item{shapes}{a data frame of the precomputed ellipse parameters (one
+#'     row per set, columns `type, h, k, a, b, phi`). `venn()` always uses
+#'     ellipses.}
+#'   \item{ellipses}{the legacy 5-column data frame
+#'     (`h, k, a, b, phi`) — kept for back-compat alongside the canonical
+#'     `shapes` slot.}
 #'   \item{original.values}{set relationships in the input}
 #'   \item{fitted.values}{set relationships in the solution}
 #'
@@ -66,17 +70,11 @@ venn.default <- function(
       stop("'names' must be as long as 'combinations'.")
     }
 
-    n <- combinations
-    setnames <- names
-    id <- bit_indexr(n)
-
-    combo_names <- unlist(lapply(
-      apply(id, 1, function(x) names[x]),
-      paste,
-      collapse = "&"
-    ))
-    combinations <- rep.int(1, nrow(id))
-    names(combinations) <- combo_names
+    combo_names <- all_set_combinations(names)
+    combinations <- stats::setNames(
+      rep.int(1, length(combo_names)),
+      combo_names
+    )
   } else {
     n_combinations <- length(unique(unlist(strsplit(names(combinations), "&"))))
 
@@ -171,5 +169,5 @@ venn.matrix <- function(combinations, ...) {
 #' # A venn diagram from a list of sample spaces (the list method)
 #' venn(plants[c("erigenia", "solanum", "cynodon")])
 venn.list <- function(combinations, ...) {
-  venn(parse_list(combinations), input = "union", ...)
+  venn(parse_list(combinations), input = "disjoint", ...)
 }

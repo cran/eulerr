@@ -44,11 +44,22 @@ test_that("normal plotting works without errors", {
     f1,
     quantities = c("foo", A = "bar")
   ))
-  p_named_fill <- plot(f1, fills = c(A = "black"), labels = FALSE, quantities = FALSE, edges = FALSE, legend = FALSE)
+  p_named_fill <- plot(
+    f1,
+    fills = c(A = "black"),
+    labels = FALSE,
+    quantities = FALSE,
+    edges = FALSE,
+    legend = FALSE
+  )
   fill_children <- p_named_fill$children$canvas.grob$children$diagram.grob.1$children
-  fill_cols <- vapply(fill_children, function(g) {
-    if (inherits(g, "gTree")) g$children[[1]]$gp$fill else g$gp$fill
-  }, character(1))
+  fill_cols <- vapply(
+    fill_children,
+    function(g) {
+      if (inherits(g, "gTree")) g$children[[1]]$gp$fill else g$gp$fill
+    },
+    character(1)
+  )
   expect_equal(unname(fill_cols[1]), "black")
   expect_false(all(fill_cols == "black"))
 
@@ -62,9 +73,13 @@ test_that("normal plotting works without errors", {
     legend = FALSE
   )
   pattern_children <- p_named_pattern$children$canvas.grob$children$diagram.grob.1$children
-  pattern_count <- sum(vapply(pattern_children, function(g) {
-    inherits(g, "gTree") && length(g$children) > 1L
-  }, logical(1)))
+  pattern_count <- sum(vapply(
+    pattern_children,
+    function(g) {
+      inherits(g, "gTree") && length(g$children) > 1L
+    },
+    logical(1)
+  ))
   expect_equal(pattern_count, 1L)
 
   p_named_pattern_union <- plot(
@@ -77,12 +92,19 @@ test_that("normal plotting works without errors", {
     legend = FALSE
   )
   pattern_children_union <- p_named_pattern_union$children$canvas.grob$children$diagram.grob.1$children
-  pattern_count_union <- sum(vapply(pattern_children_union, function(g) {
-    inherits(g, "gTree") && length(g$children) > 1L
-  }, logical(1)))
+  pattern_count_union <- sum(vapply(
+    pattern_children_union,
+    function(g) {
+      inherits(g, "gTree") && length(g$children) > 1L
+    },
+    logical(1)
+  ))
   expect_equal(pattern_count_union, 0L)
 
-  expect_error(plot(f1, fills = list(fill = c("red", "blue", "green", "black"))))
+  expect_error(plot(
+    f1,
+    fills = list(fill = c("red", "blue", "green", "black"))
+  ))
   bad_named_fills <- c("black", "blue")
   names(bad_named_fills) <- c("A", "")
   expect_error(plot(f1, fills = bad_named_fills))
@@ -90,8 +112,14 @@ test_that("normal plotting works without errors", {
   bad_named_patterns <- c("stripes", NA_character_)
   names(bad_named_patterns) <- c("A", "")
   expect_error(plot(f1, patterns = bad_named_patterns))
-  expect_error(plot(f1, patterns = list(type = c(A = "stripes"), mode = "asdf")))
-  expect_error(plot(f1, patterns = list(type = c("stripes", NA, "stripes", NA))))
+  expect_error(plot(
+    f1,
+    patterns = list(type = c(A = "stripes"), mode = "asdf")
+  ))
+  expect_error(plot(
+    f1,
+    patterns = list(type = c("stripes", NA, "stripes", NA))
+  ))
 
   grid <- expand.grid(
     labels = c(TRUE, FALSE),
@@ -187,7 +215,12 @@ test_that("set-level pattern types propagate to intersections", {
   p <- plot(
     f,
     fills = list(fill = c("grey90", "grey90")),
-    patterns = list(type = c("stripes", NA), angle = c(25, 0), col = "black", lwd = 1),
+    patterns = list(
+      type = c("stripes", NA),
+      angle = c(25, 0),
+      col = "black",
+      lwd = 1
+    ),
     labels = FALSE,
     quantities = FALSE,
     edges = FALSE,
@@ -206,16 +239,19 @@ test_that("legacy fill pattern arguments still work with deprecation warning", {
   png(tmp)
 
   f <- euler(c(A = 10, B = 8, "A&B" = 3))
-  expect_warning(plot(
-    f,
-    fills = list(
-      fill = c("grey90", "grey90"),
-      pattern = "stripes",
-      angle = 30,
-      pattern_col = "black",
-      pattern_lwd = 0.8
-    )
-  ), "deprecated")
+  expect_warning(
+    plot(
+      f,
+      fills = list(
+        fill = c("grey90", "grey90"),
+        pattern = "stripes",
+        angle = 30,
+        pattern_col = "black",
+        pattern_lwd = 0.8
+      )
+    ),
+    "deprecated"
+  )
 
   dev.off()
   unlink(tmp)
@@ -235,9 +271,13 @@ test_that("legend keys support patterns", {
   )
 
   legend_grob <- p$children$legend.grob
-  point_cells <- legend_grob$children[vapply(legend_grob$children, function(cell) {
-    inherits(cell$children[[1]], "gTree")
-  }, logical(1))]
+  point_cells <- legend_grob$children[vapply(
+    legend_grob$children,
+    function(cell) {
+      inherits(cell$children[[1]], "gTree")
+    },
+    logical(1)
+  )]
 
   expect_true(length(point_cells) > 0)
 
@@ -307,11 +347,64 @@ test_that("quantity formatters can be customized", {
   )
   q <- p$data$centers$quantities
   names(q) <- rownames(p$data$centers)
-  expect_equal(unname(q[c("A", "B", "A&B")]), c("10 (0.1)", "8 (0.08)", "3 (0.03)"))
+  expect_equal(
+    unname(q[c("A", "B", "A&B")]),
+    c("10 (0.1)", "8 (0.08)", "3 (0.03)")
+  )
 
   expect_error(plot(f, quantities = list(format = 1)))
   expect_error(plot(f, quantities = list(format = list(fun = 1))))
   expect_error(plot(f, quantities = list(total = 0)))
+
+  dev.off()
+  unlink(tmp)
+})
+
+test_that("quantities$template controls rendered text", {
+  tmp <- tempfile()
+  png(tmp)
+
+  f <- euler(c(A = 10, B = 8, "A&B" = 3), input = "disjoint")
+
+  p <- plot(
+    f,
+    quantities = list(template = "{counts}\n{percent}")
+  )
+  q <- p$data$centers$quantities
+  names(q) <- rownames(p$data$centers)
+  expect_equal(
+    unname(q[c("A", "B", "A&B")]),
+    c("10\n48 %", "8\n38 %", "3\n14 %")
+  )
+
+  p <- plot(
+    f,
+    quantities = list(template = "n={counts} ({percent})")
+  )
+  q <- p$data$centers$quantities
+  names(q) <- rownames(p$data$centers)
+  expect_equal(
+    unname(q[c("A", "B", "A&B")]),
+    c("n=10 (48 %)", "n=8 (38 %)", "n=3 (14 %)")
+  )
+
+  # Template overrides type.
+  p <- plot(
+    f,
+    quantities = list(type = "counts", template = "{percent}")
+  )
+  q <- p$data$centers$quantities
+  names(q) <- rownames(p$data$centers)
+  expect_equal(unname(q[c("A", "B", "A&B")]), c("48 %", "38 %", "14 %"))
+
+  expect_error(
+    plot(f, quantities = list(template = "{counts} ({foo})")),
+    "Unknown placeholder"
+  )
+  expect_error(
+    plot(f, quantities = list(template = c("{counts}", "{percent}"))),
+    "single string"
+  )
 
   dev.off()
   unlink(tmp)
@@ -350,6 +443,84 @@ test_that("plots with euler lists works", {
   unlink(tmp)
 })
 
+test_that("strip labels can be customized", {
+  tmp <- tempfile()
+  png(tmp)
+
+  f <- euler(fruits[, 1:5], by = list(age, sex))
+
+  p <- plot(
+    f,
+    strips = list(
+      labels = list(
+        top = c("Women", "Men"),
+        left = c("Children", "Adults")
+      )
+    )
+  )
+  expect_equal(p$children$strip.top.grob$label, c("Women", "Men"))
+  expect_equal(p$children$strip.left.grob$label, c("Children", "Adults"))
+
+  top_named <- c(male = "Men", female = "Women")
+  left_named <- c(adult = "Adults", child = "Children")
+  p_named <- plot(
+    f,
+    strips = list(labels = list(top = top_named, left = left_named))
+  )
+  expect_equal(p_named$children$strip.top.grob$label, c("Women", "Men"))
+  expect_equal(p_named$children$strip.left.grob$label, c("Children", "Adults"))
+
+  top_expr <- str2expression(c("alpha[1]", "beta[2]"))
+  left_expr <- str2expression(c("gamma", "delta"))
+  p_expr <- plot(
+    f,
+    strips = list(labels = list(top = top_expr, left = left_expr))
+  )
+  expect_equal(p_expr$children$strip.top.grob$label, top_expr)
+  expect_equal(p_expr$children$strip.left.grob$label, left_expr)
+
+  expect_error(
+    plot(f, strips = list(labels = list(top = "Women"))),
+    "`strips\\$labels\\$top` must have length 2"
+  )
+  expect_error(
+    plot(f, strips = list(labels = "foo")),
+    "`strips\\$labels` must be a list"
+  )
+  expect_error(
+    plot(f, strips = list(labels = list("Women", "Men"))),
+    "`strips\\$labels` must be a named list"
+  )
+  expect_error(
+    plot(
+      f,
+      strips = list(labels = list(top = c(female = "Women", "Men")))
+    ),
+    "must be fully named"
+  )
+  expect_error(
+    plot(
+      f,
+      strips = list(labels = list(top = c(female = "Women", female = "Men")))
+    ),
+    "must have unique names"
+  )
+  expect_error(
+    plot(
+      f,
+      strips = list(labels = list(top = c(female = "Women", foo = "Men")))
+    ),
+    "unknown level names"
+  )
+  expect_error(
+    plot(f, strips = list(labels = list(top = c(female = "Women")))),
+    "must provide labels for all levels"
+  )
+
+  dev.off()
+  unlink(tmp)
+})
+
 test_that("venn plotting prefers eulerr class dispatch", {
   tmp <- tempfile()
   png(tmp)
@@ -366,7 +537,15 @@ test_that("empty singleton sets do not override overlap fill colors", {
   tmp <- tempfile()
   png(tmp)
 
-  fit <- euler(c(A = 0, B = 16, C = 12, "A&B" = 25, "A&C" = 39, "B&C" = 1, "A&B&C" = 40))
+  fit <- euler(c(
+    A = 0,
+    B = 16,
+    C = 12,
+    "A&B" = 25,
+    "A&C" = 39,
+    "B&C" = 1,
+    "A&B&C" = 40
+  ))
   p <- plot(
     fit,
     fills = list(fill = c("#E41A1C", "#377EB8", "#4DAF4A")),
@@ -399,4 +578,395 @@ test_that("legacy plot.venn warns", {
 
   dev.off()
   unlink(tmp)
+})
+
+test_that("rotate parameter works", {
+  tmp <- tempfile()
+  png(tmp)
+
+  fit <- euler(c(A = 10, B = 5, "A&B" = 3))
+  expect_silent(plot(fit, rotate = 0))
+  expect_silent(plot(fit, rotate = 90))
+  expect_silent(plot(fit, rotate = 45))
+  expect_silent(plot(fit, rotate = -30))
+
+  dev.off()
+  unlink(tmp)
+})
+
+test_that("by_group applies per-panel overrides", {
+  tmp <- tempfile()
+  png(tmp)
+
+  fit <- euler(fruits[, 1:4], by = list(sex))
+
+  # Helper: extract the colors used by quantity textGrobs in panel `i`.
+  panel_quantity_cols <- function(g, i) {
+    panel <- g$children$canvas.grob$children[[i]]
+    tags <- panel$children$tags$children
+    out <- character(0)
+    for (tag in tags) {
+      for (child in tag$children) {
+        if (
+          inherits(child, "text") &&
+            grepl("^tag\\.quantity\\.", child$name)
+        ) {
+          out <- c(out, child$gp$col)
+        }
+      }
+    }
+    unique(out)
+  }
+
+  # Per-panel overrides for `quantities`
+  g <- plot(
+    fit,
+    quantities = list(
+      by_group = list(
+        male = list(col = "blue"),
+        female = list(col = "red")
+      )
+    )
+  )
+  female_idx <- which(names(fit) == "female")
+  male_idx <- which(names(fit) == "male")
+  expect_equal(panel_quantity_cols(g, female_idx), "red")
+  expect_equal(panel_quantity_cols(g, male_idx), "blue")
+
+  # Top-level value applies to panels not listed in `by_group`
+  g <- plot(
+    fit,
+    quantities = list(
+      col = "gray",
+      by_group = list(male = list(col = "blue"))
+    )
+  )
+  expect_equal(panel_quantity_cols(g, female_idx), "gray")
+  expect_equal(panel_quantity_cols(g, male_idx), "blue")
+
+  # Multi-`by` uses dotted keys (factor levels joined by ".")
+  fit2 <- euler(fruits, by = list(sex, age))
+  g <- plot(
+    fit2,
+    quantities = list(
+      col = "darkgreen",
+      by_group = list("male.adult" = list(col = "navy"))
+    )
+  )
+  ma_idx <- which(names(fit2) == "male.adult")
+  fa_idx <- which(names(fit2) == "female.adult")
+  expect_equal(panel_quantity_cols(g, ma_idx), "navy")
+  expect_equal(panel_quantity_cols(g, fa_idx), "darkgreen")
+
+  # All five params accept `by_group` without error
+  expect_silent(plot(
+    fit,
+    fills = list(by_group = list(male = list(fill = "steelblue"))),
+    edges = list(by_group = list(male = list(lwd = 2))),
+    labels = list(by_group = list(male = list(col = "purple"))),
+    quantities = list(by_group = list(male = list(col = "purple"))),
+    patterns = list(
+      type = "stripes",
+      by_group = list(male = list(angle = 60))
+    )
+  ))
+
+  dev.off()
+  unlink(tmp)
+})
+
+test_that("by_group rejects invalid input", {
+  fit <- euler(fruits[, 1:4], by = list(sex))
+
+  # Unknown panel key
+  expect_error(
+    plot(fit, quantities = list(by_group = list(bogus = list(col = "red")))),
+    "unknown keys"
+  )
+
+  # Structural field
+  expect_error(
+    plot(
+      fit,
+      quantities = list(by_group = list(male = list(type = "percent")))
+    ),
+    "cannot be overridden per panel"
+  )
+
+  # by_group without `by =`
+  fit_plain <- euler(c(A = 1, B = 2, "A&B" = 1))
+  expect_error(
+    plot(
+      fit_plain,
+      quantities = list(by_group = list(any = list(col = "red")))
+    ),
+    "requires a diagram fit with `by ="
+  )
+
+  # Override is not a list
+  expect_error(
+    plot(fit, quantities = list(by_group = list(male = "red"))),
+    "must be a list"
+  )
+
+  # by_group itself unnamed
+  expect_error(
+    plot(fit, quantities = list(by_group = list(list(col = "red")))),
+    "fully named list"
+  )
+})
+
+test_that("annotations render as a third stacked text element", {
+  tmp <- tempfile()
+  png(tmp)
+  on.exit({
+    dev.off()
+    unlink(tmp)
+  })
+
+  tag_text_grobs <- function(tag, kind) {
+    nm_prefix <- paste0("tag.", kind, ".")
+    out <- list()
+    for (child in tag$children) {
+      if (inherits(child, "text") && startsWith(child$name, nm_prefix)) {
+        out[[length(out) + 1L]] <- child
+      }
+    }
+    out
+  }
+
+  fit <- euler(c(A = 10, B = 5, "A&B" = 3))
+  p <- plot(
+    fit,
+    quantities = TRUE,
+    annotations = c(A = "mean=35", "A&B" = "n=3")
+  )
+
+  # The centers data.frame carries the per-region annotation text.
+  expect_equal(p$data$centers["A", "annotations"], "mean=35")
+  expect_equal(p$data$centers["A&B", "annotations"], "n=3")
+  expect_true(is.na(p$data$centers["B", "annotations"]))
+
+  tags <- p$children$canvas.grob$children$diagram.grob.1$children$tags$children
+  combos <- vapply(tags, function(t) t$combo_key %||% "", character(1))
+
+  # A: all three slots populated
+  a <- tags[[which(combos == "A")]]
+  expect_true(isTRUE(a$has_label))
+  expect_true(isTRUE(a$has_quantity))
+  expect_true(isTRUE(a$has_annotation))
+  expect_length(tag_text_grobs(a, "annotation"), 1L)
+  expect_equal(tag_text_grobs(a, "annotation")[[1L]]$label, "mean=35")
+
+  # B: no annotation requested -> nullGrob placeholder
+  b <- tags[[which(combos == "B")]]
+  expect_false(isTRUE(b$has_annotation))
+  expect_length(tag_text_grobs(b, "annotation"), 0L)
+
+  # A&B: quantity at anchor, annotation below (no label)
+  ab <- tags[[which(combos == "A&B")]]
+  expect_false(isTRUE(ab$has_label))
+  expect_true(isTRUE(ab$has_quantity))
+  expect_true(isTRUE(ab$has_annotation))
+})
+
+test_that("annotations accept named-vector shorthand and list with styling", {
+  tmp <- tempfile()
+  png(tmp)
+  on.exit({
+    dev.off()
+    unlink(tmp)
+  })
+
+  fit <- euler(c(A = 10, B = 5, "A&B" = 3))
+
+  # Shorthand named vector
+  p1 <- plot(fit, annotations = c(A = "a"))
+  # Equivalent list form
+  p2 <- plot(fit, annotations = list(labels = c(A = "a")))
+
+  expect_equal(p1$data$centers$annotations, p2$data$centers$annotations)
+
+  # List form with gpar override
+  p3 <- plot(
+    fit,
+    annotations = list(labels = c(A = "a"), col = "purple", cex = 1.5)
+  )
+  ann_tag <- p3$children$canvas.grob$children$diagram.grob.1$children$tags$children[[1L]]
+  expect_equal(ann_tag$annotation_gp$col, "purple")
+  expect_equal(ann_tag$annotation_gp$cex, 1.5)
+})
+
+test_that("annotation anchor falls back when quantity or label is absent", {
+  tmp <- tempfile()
+  png(tmp)
+  on.exit({
+    dev.off()
+    unlink(tmp)
+  })
+
+  fit <- euler(c(A = 10, B = 5, "A&B" = 3))
+
+  # quantity off, label on -> label is the anchor, annotation stacks below it
+  p_no_quant <- plot(
+    fit,
+    quantities = FALSE,
+    labels = TRUE,
+    annotations = c(A = "note")
+  )
+  tags <- p_no_quant$children$canvas.grob$children$diagram.grob.1$children$tags$children
+  combos <- vapply(tags, function(t) t$combo_key %||% "", character(1))
+  a <- tags[[which(combos == "A")]]
+  expect_true(isTRUE(a$has_label))
+  expect_false(isTRUE(a$has_quantity))
+  expect_true(isTRUE(a$has_annotation))
+
+  # labels off, quantities off -> annotation IS the anchor
+  p_solo <- plot(
+    fit,
+    quantities = FALSE,
+    labels = FALSE,
+    annotations = c(A = "only")
+  )
+  tags <- p_solo$children$canvas.grob$children$diagram.grob.1$children$tags$children
+  combos <- vapply(tags, function(t) t$combo_key %||% "", character(1))
+  a <- tags[[which(combos == "A")]]
+  expect_false(isTRUE(a$has_label))
+  expect_false(isTRUE(a$has_quantity))
+  expect_true(isTRUE(a$has_annotation))
+})
+
+test_that("by_group panel overrides apply to annotations", {
+  tmp <- tempfile()
+  png(tmp)
+  on.exit({
+    dev.off()
+    unlink(tmp)
+  })
+
+  panel_annotation_cols <- function(g, i) {
+    panel <- g$children$canvas.grob$children[[i]]
+    tags <- panel$children$tags$children
+    out <- character(0)
+    for (tag in tags) {
+      for (child in tag$children) {
+        if (
+          inherits(child, "text") &&
+            grepl("^tag\\.annotation\\.", child$name)
+        ) {
+          out <- c(out, child$gp$col)
+        }
+      }
+    }
+    unique(out)
+  }
+
+  fit <- euler(fruits[, 1:4], by = list(sex))
+  female_idx <- which(names(fit) == "female")
+  male_idx <- which(names(fit) == "male")
+
+  g <- plot(
+    fit,
+    quantities = TRUE,
+    annotations = list(
+      labels = c(banana = "tropical"),
+      by_group = list(
+        female = list(col = "purple"),
+        male = list(col = "navy")
+      )
+    )
+  )
+  expect_equal(panel_annotation_cols(g, female_idx), "purple")
+  expect_equal(panel_annotation_cols(g, male_idx), "navy")
+})
+
+test_that("annotations reject unnamed and non-character input", {
+  fit <- euler(c(A = 1, B = 1, "A&B" = 1))
+  expect_error(
+    plot(fit, annotations = c("foo", "bar")),
+    "fully named character vector"
+  )
+  expect_error(
+    plot(fit, annotations = list(labels = c(A = 1, B = 2))),
+    "must be a character vector"
+  )
+  # by_group requires `by =`
+  expect_error(
+    plot(fit, annotations = list(by_group = list(any = list(col = "red")))),
+    "requires a diagram fit with `by ="
+  )
+})
+
+test_that("eulergrams can be composed with | and /", {
+  tmp <- tempfile()
+  png(tmp)
+  on.exit({
+    dev.off()
+    unlink(tmp)
+  })
+
+  p1 <- plot(euler(c(A = 1, B = 8, "A&B" = 1)))
+  p2 <- plot(euler(c(A = 1, C = 1, "A&C" = 1)))
+  p3 <- plot(euler(c(X = 3, Y = 2, "X&Y" = 1)))
+
+  horiz <- p1 | p2
+  expect_s3_class(horiz, "eulergram")
+  expect_equal(horiz$name, "euler.composed")
+  expect_length(horiz$children, 2L)
+  expect_equal(horiz$children[[1]]$vp$layout.pos.col[1], 1L)
+  expect_equal(horiz$children[[2]]$vp$layout.pos.col[1], 3L)
+  expect_equal(horiz$vp$layout$ncol, 3L)
+  expect_equal(horiz$vp$layout$nrow, 1L)
+
+  vert <- p1 / p2
+  expect_s3_class(vert, "eulergram")
+  expect_equal(vert$vp$layout$nrow, 3L)
+  expect_equal(vert$vp$layout$ncol, 1L)
+  expect_equal(vert$children[[1]]$vp$layout.pos.row[1], 1L)
+  expect_equal(vert$children[[2]]$vp$layout.pos.row[1], 3L)
+
+  nested <- (p1 | p2) / p3
+  expect_s3_class(nested, "eulergram")
+  expect_equal(nested$vp$layout$nrow, 3L)
+  inner <- nested$children[[1]]$children[[1]]
+  expect_s3_class(inner, "eulergram")
+  expect_equal(inner$vp$layout$ncol, 3L)
+
+  expect_silent({
+    grid::grid.newpage()
+    grid::grid.draw(nested)
+  })
+})
+
+test_that("composition spacing follows eulerr_options()", {
+  tmp <- tempfile()
+  png(tmp)
+  on.exit({
+    dev.off()
+    unlink(tmp)
+    eulerr_options(composition = list(spacing = grid::unit(1, "lines")))
+  })
+
+  p1 <- plot(euler(c(A = 1, B = 1, "A&B" = 1)))
+  p2 <- plot(euler(c(C = 1, D = 1, "C&D" = 1)))
+
+  eulerr_options(composition = list(spacing = grid::unit(2, "cm")))
+  composed <- p1 | p2
+  widths <- composed$vp$layout$widths
+  expect_match(as.character(widths[2]), "2")
+  expect_equal(grid::unitType(widths)[2], "cm")
+})
+
+test_that("composing non-eulergram operands fails", {
+  tmp <- tempfile()
+  png(tmp)
+  on.exit({
+    dev.off()
+    unlink(tmp)
+  })
+
+  p1 <- plot(euler(c(A = 1, B = 1, "A&B" = 1)))
+
+  expect_error(p1 | 1, "Both operands must be `eulergram`")
+  expect_error(p1 / "x", "Both operands must be `eulergram`")
 })

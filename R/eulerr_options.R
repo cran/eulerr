@@ -15,18 +15,31 @@
 #'   \item{labels}{a list of items `rot`,
 #'   `col`, `alpha`, `fontsize`, `cex`, `fontfamily`, `fontface`,
 #'   `lineheight`, and `font`}
-#'   \item{quantities}{a list of items `type`, `format`, `total`, `rot`,
+#'   \item{quantities}{a list of items `type`, `template`, `format`, `total`, `rot`,
 #'   `col`, `alpha`, `fontsize`, `cex`, `fontfamily`,
 #'   `lineheight`, and `font`}
+#'   \item{annotations}{a list of items `rot`, `col`, `alpha`, `fontsize`,
+#'   `cex`, `fontfamily`, `lineheight`, `font`, and `labels` (a named
+#'   character vector keyed by subset name). Used to add a third stacked
+#'   text element per region below the quantity.}
 #'   \item{strips}{`col`, `alpha`, `fontsize`, `cex`, `fontfamily`,
 #'   `lineheight`, and `font`}
 #'   \item{legend}{arguments to [grid::legendGrob()] as well as `col`, `alpha`,
-#'   `fontsize`, `cex`, `fontfamily`, `lineheight`, and `font`}
+#'   `fontsize`, `cex`, `symbol_size` (symbol size multiplier, independent of text
+#'   size; defaults to `cex` if `NULL`), `fontfamily`, `lineheight`, and `font`}
 #'   \item{main}{arguments to [grid::textGrob()]}
+#'   \item{complement}{a list of styling defaults for the container box
+#'   and its complement label drawn when [euler()] is called with
+#'   `complement =`. Items: `fill`, `alpha`, `col`, `lty`, `lwd`, `lex`,
+#'   `fontsize`, `cex`, `font`, `fontfamily`, `lineheight`. The default
+#'   `lty = 2` draws the container with a dashed outline.}
 #'   \item{padding}{a [grid::unit()] giving the padding between various
 #'   elements in plots from [plot.euler()], which you can change
 #'   if you, for instance, want to increase spacing between labels,
 #'   quantities, and percentages.}
+#'   \item{composition}{a list controlling how `eulergram` objects are
+#'   arranged when composed via `|` or `/`. Contains a single `spacing`
+#'   item (a [grid::unit()]) that sets the gap between adjacent plots.}
 #' }
 #'
 #' @param ... objects to update the global graphical parameters for \pkg{eulerr}
@@ -68,6 +81,7 @@ eulerr_options <- function(...) {
       list(
         labels = list(fontsize = pointsize),
         quantities = list(fontsize = pointsize),
+        annotations = list(fontsize = pointsize),
         strips = list(fontsize = pointsize),
         legend = list(fontsize = pointsize),
         main = list(fontsize = pointsize),
@@ -129,10 +143,24 @@ eulerr_default_options <- function() {
       cex = 1,
       fontfamily = "",
       lineheight = 1.2,
-      font = 2
+      font = 2,
+      placement = "raycast",
+      margin = NULL,
+      tether = "poi",
+      gap = NULL,
+      force_directed = list(iterations = NULL),
+      elbow = list(min_gap = NULL),
+      leader = list(
+        col = NULL,
+        alpha = 0.6,
+        lwd = 1,
+        lty = 2,
+        lex = 1
+      )
     ),
     quantities = list(
       type = "counts",
+      template = NULL,
       format = NULL,
       total = NULL,
       rot = 0,
@@ -140,6 +168,17 @@ eulerr_default_options <- function() {
       alpha = 1,
       fontsize = 12,
       cex = 1,
+      fontfamily = "",
+      lineheight = 1.2,
+      font = 1
+    ),
+    annotations = list(
+      labels = NULL,
+      rot = 0,
+      col = 1L,
+      alpha = 1,
+      fontsize = 12,
+      cex = 0.8,
       fontfamily = "",
       lineheight = 1.2,
       font = 1
@@ -157,6 +196,7 @@ eulerr_default_options <- function() {
     legend = list(
       side = "right",
       cex = 1,
+      symbol_size = NULL,
       fontsize = 12,
       font = 1,
       fontfamily = "",
@@ -187,6 +227,35 @@ eulerr_default_options <- function() {
       lineheight = 1.2,
       alpha = 1
     ),
-    padding = grid::unit(0.4, "lines")
+    complement = list(
+      fill = "transparent",
+      alpha = 1,
+      col = 1L,
+      lty = 2L,
+      lwd = 1,
+      lex = 1,
+      fontsize = 12,
+      cex = 1,
+      font = 1,
+      fontfamily = "",
+      lineheight = 1.2,
+      placement = "raycast",
+      margin = NULL,
+      tether = "poi",
+      gap = NULL,
+      force_directed = list(iterations = NULL),
+      elbow = list(min_gap = NULL),
+      leader = list(
+        col = NULL,
+        alpha = 0.6,
+        lwd = 1,
+        lty = 2,
+        lex = 1
+      )
+    ),
+    padding = grid::unit(0.4, "lines"),
+    composition = list(
+      spacing = grid::unit(1, "lines")
+    )
   )
 }

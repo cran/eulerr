@@ -2,20 +2,27 @@ fit_diagram <- function(
   combinations,
   type = c("euler", "venn"),
   input = c("disjoint", "union"),
-  shape = c("circle", "ellipse"),
-  loss = c("square", "abs", "region"),
-  loss_aggregator = c("sum", "max"),
+  shape = c("circle", "ellipse", "rectangle", "square"),
+  loss = c(
+    "sum_squared",
+    "sum_absolute",
+    "sum_absolute_region_error",
+    "sum_squared_region_error",
+    "max_absolute",
+    "max_squared",
+    "root_mean_squared",
+    "stress",
+    "diag_error"
+  ),
+  loss_aggregator = NULL,
+  complement = NULL,
   control = list(),
   ...
 ) {
   input <- match.arg(input)
   shape <- match.arg(shape)
   type <- match.arg(type)
-  loss <- match.arg(loss)
-  loss_aggregator <- match.arg(loss_aggregator)
-
-  n_restarts <- 10L # should this be made an argument?
-  small <- sqrt(.Machine$double.eps)
+  loss <- resolve_loss(loss, loss_aggregator)
 
   if (!is.numeric(combinations)) {
     stop("`combinations` must be numeric")
@@ -33,319 +40,351 @@ fit_diagram <- function(
     stop("names of elements in `combinations` cannot be duplicated")
   }
 
-  combo_names <- strsplit(names(combinations), split = "&", fixed = TRUE)
-  setnames <- unique(unlist(combo_names, use.names = FALSE))
+  if (!is.null(complement)) {
+    if (
+      !is.numeric(complement) ||
+        length(complement) != 1L ||
+        !is.finite(complement) ||
+        complement < 0
+    ) {
+      stop("`complement` must be a single non-negative number.")
+    }
+    complement <- as.double(complement)
+  }
 
-  # setup preliminary return pars
-
+  combo_name_parts <- strsplit(names(combinations), split = "&", fixed = TRUE)
+  setnames <- unique(unlist(combo_name_parts, use.names = FALSE))
   n <- length(setnames)
-  id <- bit_indexr(n)
-  N <- NROW(id)
 
-  areas <- double(N)
-  for (i in 1L:N) {
-    s <- setnames[id[i, ]]
-    for (j in seq_along(combo_names)) {
-      if (setequal(s, combo_names[[j]])) {
-        areas[i] <- combinations[j]
+  if (type == "venn" && !is.null(complement)) {
+    stop("`complement` is not supported for `venn()` diagrams.")
+  }
+
+  # Venn early return (uses lookup table, no optimization)
+  if (type == "venn") {
+    combo_labels <- all_set_combinations(setnames)
+    N <- length(combo_labels)
+    combo_set_lists <- strsplit(combo_labels, "&", fixed = TRUE)
+    cards <- lengths(combo_set_lists)
+
+    areas <- numeric(N)
+    for (j in seq_along(combo_name_parts)) {
+      parts <- combo_name_parts[[j]]
+      hit <- vapply(
+        combo_set_lists,
+        function(s) length(s) == length(parts) && all(s %in% parts),
+        logical(1)
+      )
+      areas[hit] <- combinations[j]
+    }
+
+    if (input == "disjoint") {
+      areas_disjoint <- areas
+    } else {
+      areas_disjoint <- numeric(N)
+      for (i in order(cards, decreasing = TRUE)) {
+        this_sets <- combo_set_lists[[i]]
+        is_strict_super <- cards > cards[i] &
+          vapply(combo_set_lists, function(s) all(this_sets %in% s), logical(1))
+        areas_disjoint[i] <- areas[i] - sum(areas_disjoint[is_strict_super])
+      }
+      if (any(areas_disjoint < 0)) {
+        stop("Check your set configuration. Some disjoint areas are negative.")
       }
     }
-  }
 
-  # Decompose or collect set volumes depending on input
-  if (input == "disjoint") {
-    areas_disjoint <- areas
-    areas[] <- 0
-    for (i in rev(seq_along(areas))) {
-      prev_areas <- rowSums(id[, id[i, ], drop = FALSE]) == sum(id[i, ])
-      areas[i] <- sum(areas_disjoint[prev_areas])
-    }
-  } else if (input == "union") {
-    areas_disjoint <- double(length(areas))
-    for (i in rev(seq_along(areas))) {
-      prev_areas <- rowSums(id[, id[i, ], drop = FALSE]) == sum(id[i, ])
-      areas_disjoint[i] <- areas[i] - sum(areas_disjoint[prev_areas])
-    }
-    if (any(areas_disjoint < 0)) {
-      stop("Check your set configuration. Some disjoint areas are negative.")
-    }
-  }
+    orig <- stats::setNames(areas_disjoint, combo_labels)
+    fit <- stats::setNames(rep.int(1, N), combo_labels)
 
-  # setup return values
-  orig <- rep.int(0, N)
-  fit <- rep.int(0, N)
-  names(orig) <- names(fit) <-
-    apply(id, 1L, function(x) paste0(setnames[x], collapse = "&"))
-
-  # return venn diagram early if requested
-  if (type == "venn") {
     fpar <- venn_spec[[n]]
     rownames(fpar) <- setnames
+    shapes <- ellipse_frame_to_shapes(fpar, "ellipse")
 
-    orig[] <- areas_disjoint
-
-    out <- structure(
+    return(structure(
       list(
+        shapes = shapes,
         ellipses = fpar,
         original.values = orig,
-        fitted.values = rep(1, length(orig))
+        fitted.values = fit
       ),
       class = c("eulerr_venn", "venn", "euler", "list")
-    )
-    return(out)
+    ))
   }
 
-  # setup return object
-  fpar <- as.data.frame(
-    matrix(
-      NA,
-      ncol = 5L,
-      nrow = n,
-      dimnames = list(setnames, c("h", "k", "a", "b", "phi"))
-    ),
-    stringsAsFactors = TRUE
-  )
-
-  # find empty sets
-  empty_sets <- areas[seq_len(n)] < sqrt(.Machine$double.eps)
-  empty_subsets <- rowSums(id[, empty_sets, drop = FALSE]) > 0
-
-  id <- id[!empty_subsets, !empty_sets, drop = FALSE]
-  N <- NROW(id)
-  n <- sum(!empty_sets)
-  areas <- areas[!empty_subsets]
-  areas_disjoint <- areas_disjoint[!empty_subsets]
-
+  # Euler fit: delegate to Rust
   control <- utils::modifyList(
     list(
-      extraopt = (n == 3) && (match.arg(shape) == "ellipse"),
+      extraopt = (n == 3) && (shape == "ellipse"),
       extraopt_threshold = 0.001,
-      extraopt_control = list()
+      extraopt_control = list(),
+      tolerance = 1e-3,
+      max_sets = NULL
     ),
     control
   )
 
-  if (n > 1L) {
-    if (all(areas == 0)) {
-      # all sets are zero
-      fpar[] <- 0
-    } else {
-      id_sums <- rowSums(id)
-      ones <- id_sums == 1L
-      twos <- id_sums == 2L
-      two <- choose_two(1:n)
-      r <- sqrt(areas[ones] / pi)
-
-      # Establish identities of disjoint and subset sets
-      subset <- disjoint <- matrix(FALSE, ncol = n, nrow = n)
-      distances <- matrix(0, ncol = n, nrow = n)
-
-      lwrtri <- lower.tri(subset)
-
-      tmp <- matrix(areas[ones][two], ncol = 2L)
-
-      subset[lwrtri] <- areas[twos] == tmp[, 1L] | areas[twos] == tmp[, 2L]
-      disjoint[lwrtri] <- areas[twos] == 0
-      distances[lwrtri] <- mapply(
-        separate_two_discs,
-        r1 = r[two[, 1L]],
-        r2 = r[two[, 2L]],
-        overlap = areas[twos],
-        USE.NAMES = FALSE
-      )
-      subset <- make_symmetric(subset)
-      disjoint <- make_symmetric(disjoint)
-      distances <- make_symmetric(distances)
-
-      # Starting layout
-      obj <- Inf
-      initial_layouts <- vector("list", n_restarts)
-      bnd <- sqrt(sum(r^2 * pi))
-
-      i <- 1L
-      while (obj > small && i <= n_restarts) {
-        initial_layouts[[i]] <- stats::nlm(
-          f = optim_init,
-          p = stats::runif(n * 2, 0, bnd),
-          d = distances,
-          disjoint = disjoint,
-          subset = subset,
-          iterlim = 1000L,
-          check.analyticals = FALSE
-        )
-        obj <- initial_layouts[[i]]$minimum
-        i <- i + 1L
-      }
-
-      # Find the best initial layout
-      best_init <- which.min(lapply(
-        initial_layouts[1L:(i - 1L)],
-        "[[",
-        "minimum"
-      ))
-      initial_layout <- initial_layouts[[best_init]]
-
-      # Final layout
-      circle <- match.arg(shape) == "circle"
-
-      if (circle) {
-        pars <- as.vector(matrix(
-          c(initial_layout$estimate, r),
-          3L,
-          byrow = TRUE
-        ))
-      } else {
-        pars <- as.vector(rbind(
-          matrix(initial_layout$estimate, 2L, byrow = TRUE),
-          r,
-          r,
-          0,
-          deparse.level = 0L
-        ))
-      }
-
-      orig[!empty_subsets] <- areas_disjoint
-
-      # Try to find a solution using nlm() first (faster)
-      # TODO: Allow user options here?
-      nlm_solution <- stats::nlm(
-        f = optim_final_loss,
-        p = pars,
-        data = areas_disjoint,
-        circle = circle,
-        loss_type = loss,
-        loss_aggregator_type = loss_aggregator,
-        iterlim = 1e6
-      )$estimate
-
-      tpar <- as.data.frame(
-        matrix(
-          data = nlm_solution,
-          ncol = if (circle) 3L else 5L,
-          dimnames = list(
-            setnames[!empty_sets],
-            if (circle) {
-              c("h", "k", "r")
-            } else {
-              c("h", "k", "a", "b", "phi")
-            }
-          ),
-          byrow = TRUE
-        ),
-        stringsAsFactors = TRUE
-      )
-      if (circle) {
-        tpar <- cbind(tpar, tpar[, 3L], 0)
-      }
-
-      # Normalize layout
-      nlm_fit <- as.vector(intersect_ellipses(nlm_solution, circle))
-
-      nlm_pars <- compress_layout(normalize_pars(tpar), id, nlm_fit)
-
-      nlm_diagError <- diagError(nlm_fit, orig[!empty_subsets])
-
-      # If inadequate solution, try with a second optimizer (slower, better)
-      if (
-        !circle &&
-          control$extraopt &&
-          nlm_diagError > control$extraopt_threshold
-      ) {
-        # Set bounds for the parameters
-        newpars <- matrix(
-          data = as.vector(t(nlm_pars)),
-          ncol = 5L,
-          dimnames = list(setnames, c("h", "k", "a", "b", "phi")),
-          byrow = TRUE
-        )
-
-        constraints <- get_constraints(compress_layout(newpars, id, nlm_fit))
-
-        last_ditch_effort <- GenSA::GenSA(
-          par = as.vector(newpars),
-          fn = optim_final_loss,
-          lower = constraints$lwr,
-          upper = constraints$upr,
-          circle = circle,
-          data = areas_disjoint,
-          loss_type = loss,
-          loss_aggregator_type = loss_aggregator,
-          control = utils::modifyList(
-            list(
-              threshold.stop = sqrt(.Machine$double.eps),
-              max.call = 1e7
-            ),
-            control$extraopt_control
-          )
-        )$par
-
-        last_ditch_fit <- as.vector(intersect_ellipses(
-          last_ditch_effort,
-          circle
-        ))
-        last_ditch_diagError <- diagError(last_ditch_fit, orig)
-
-        # Check for the best solution
-        if (last_ditch_diagError < nlm_diagError) {
-          final_par <- last_ditch_effort
-          fit[!empty_subsets] <- last_ditch_fit
-        } else {
-          final_par <- nlm_solution
-          fit[!empty_subsets] <- nlm_fit
-        }
-      } else {
-        final_par <- nlm_solution
-        fit[!empty_subsets] <- nlm_fit
-      }
-
-      # names(orig) <- names(fit) <-
-      #   apply(id, 1L, function(x) paste0(setnames[x], collapse = "&"))
-
-      regionError <- regionError(fit, orig)
-      diagError <- diagError(regionError = regionError)
-      stress <- stress(orig, fit)
-
-      temp <- matrix(
-        data = final_par,
-        ncol = if (circle) 3L else 5L,
-        byrow = TRUE
-      )
-
-      if (circle) {
-        temp <- cbind(temp, temp[, 3L], 0)
-      }
-
-      # Normalize semiaxes and rotation
-      temp <- normalize_pars(temp)
-
-      # Find disjoint clusters and compress the layout
-      temp <- compress_layout(temp, id, fit[!empty_subsets])
-
-      # Center the solution on the coordinate plane
-      fpar[!empty_sets, ] <- center_layout(temp)
-    }
+  # Keep the global-search fallback gated on ellipse fits for now — eunoia's
+  # rectangle/square fitters haven't been tuned to benefit from CMA-ES the
+  # way the ellipse path has.
+  extraopt_threshold <- if (isTRUE(control$extraopt) && shape == "ellipse") {
+    as.numeric(control$extraopt_threshold)
   } else {
-    # One set
-    if (length(areas) == 0) {
-      fpar[] <- 0
-    } else {
-      fpar[!empty_sets, ] <- c(0, 0, sqrt(areas / pi), sqrt(areas / pi), 0)
-      orig[!empty_subsets] <- fit[!empty_subsets] <- areas
-    }
-    regionError <- diagError <- stress <- 0
+    NULL
   }
 
-  # Return eulerr structure
-  structure(
-    list(
-      ellipses = fpar,
-      original.values = orig,
-      fitted.values = fit,
-      residuals = orig - fit,
-      regionError = regionError,
-      diagError = diagError,
-      stress = stress
-    ),
-    class = c("euler", "list")
+  tolerance <- if (is.null(control$tolerance)) {
+    NULL
+  } else {
+    as.numeric(control$tolerance)
+  }
+
+  hard_cap <- max_sets_hard_cap()
+  max_sets <- control$max_sets
+  if (!is.null(max_sets)) {
+    if (
+      !is.numeric(max_sets) ||
+        length(max_sets) != 1L ||
+        !is.finite(max_sets) ||
+        max_sets < 1 ||
+        max_sets != as.integer(max_sets)
+    ) {
+      stop("`control$max_sets` must be a positive integer scalar")
+    }
+    max_sets <- as.integer(max_sets)
+    if (max_sets > hard_cap) {
+      stop(sprintf(
+        "`control$max_sets` (%d) exceeds the hard cap of %d",
+        max_sets,
+        hard_cap
+      ))
+    }
+  }
+
+  effective_cap <- if (is.null(max_sets)) max_sets_default() else max_sets
+  if (n > effective_cap) {
+    stop(sprintf(
+      "too many sets: %d requested, but maximum supported is %d (raise `control$max_sets` up to %d to override)",
+      n,
+      effective_cap,
+      hard_cap
+    ))
+  }
+
+  # Derive integer seed from R's RNG so set.seed() works
+  seed <- sample.int(.Machine$integer.max, 1L)
+
+  result <- fit_euler_diagram(
+    combo_names = names(combinations),
+    combo_values = as.double(combinations),
+    input = input,
+    shape = shape,
+    loss = loss,
+    extraopt_threshold = extraopt_threshold,
+    tolerance = tolerance,
+    max_sets = if (is.null(max_sets)) NULL else as.numeric(max_sets),
+    complement = complement,
+    seed = seed
   )
+
+  # Empty sets stay NA so downstream code (setup_geometry, plotting) detects
+  # them via `is.na(shapes$h)` and skips polygonization — eunoia rejects
+  # zero-area shapes, so we must not feed those through.
+  n_all <- length(result$all_set_names)
+
+  shapes <- new_shape_frame(shape, n_all, result$all_set_names)
+
+  if (length(result$fitted_set_names) > 0L) {
+    fidx <- match(result$fitted_set_names, result$all_set_names)
+    shapes$h[fidx] <- result$h
+    shapes$k[fidx] <- result$k
+    shapes$a[fidx] <- result$a
+    shapes$b[fidx] <- result$b
+    shapes$phi[fidx] <- result$phi
+    shapes$width[fidx] <- result$width
+    shapes$height[fidx] <- result$height
+    shapes$side[fidx] <- result$side
+  }
+
+  # The legacy `$ellipses` column is still populated for circle/ellipse fits
+  # so consumers reading `fit$ellipses$h` etc. keep working without change.
+  # For rectangle/square fits there is no equivalent ellipse representation,
+  # so `$ellipses` is omitted — callers must read `$shapes` (see ?euler).
+  fpar <- if (shape %in% c("circle", "ellipse")) {
+    shapes_to_ellipse_frame(shapes)
+  } else {
+    NULL
+  }
+
+  labs <- result$combo_labels
+  orig <- stats::setNames(result$original_values, labs)
+  fit <- stats::setNames(result$fitted_values, labs)
+
+  container <- if (isTRUE(result$has_container)) {
+    container_area <- result$container_width * result$container_height
+    list(
+      h = result$container_h,
+      k = result$container_k,
+      width = result$container_width,
+      height = result$container_height,
+      complement = complement,
+      complement_fitted = container_area - sum(result$fitted_values)
+    )
+  } else if (!is.null(complement)) {
+    # eunoia rejects 0-/1-set specs with a complement, so synthesise a
+    # square container around the (possibly empty) closed-form layout.
+    fitted_total <- sum(result$fitted_values)
+    side <- sqrt(fitted_total + complement)
+    if (length(result$h) >= 1L) {
+      cx <- mean(result$h)
+      cy <- mean(result$k)
+    } else {
+      cx <- 0
+      cy <- 0
+    }
+    list(
+      h = cx,
+      k = cy,
+      width = side,
+      height = side,
+      complement = complement,
+      complement_fitted = complement
+    )
+  } else {
+    NULL
+  }
+
+  out <- list(
+    shapes = shapes,
+    ellipses = fpar,
+    original.values = orig,
+    fitted.values = fit,
+    residuals = stats::setNames(result$residuals, labs),
+    regionError = stats::setNames(result$region_error, labs),
+    diagError = result$diag_error,
+    stress = result$stress,
+    container = container
+  )
+  # Drop `$ellipses` rather than carry an explicit NULL slot — `coef()` and
+  # any other consumer that checks `is.null(fit$ellipses)` then sees a
+  # missing field, which is the deprecation contract.
+  if (is.null(fpar)) {
+    out$ellipses <- NULL
+  }
+
+  structure(out, class = c("euler", "list"))
+}
+
+#' Allocate a fresh `$shapes` data frame for `n_all` sets. Rows for empty
+#' sets keep NA in every column so downstream plotting can detect them via
+#' `is.na(shapes$h)` regardless of shape kind.
+#' @keywords internal
+new_shape_frame <- function(shape, n_all, row_names) {
+  data.frame(
+    type = rep(shape, n_all),
+    h = rep(NA_real_, n_all),
+    k = rep(NA_real_, n_all),
+    a = rep(NA_real_, n_all),
+    b = rep(NA_real_, n_all),
+    phi = rep(NA_real_, n_all),
+    width = rep(NA_real_, n_all),
+    height = rep(NA_real_, n_all),
+    side = rep(NA_real_, n_all),
+    row.names = row_names,
+    stringsAsFactors = FALSE
+  )
+}
+
+#' Promote a legacy 5-column ellipse data frame (h, k, a, b, phi) into the
+#' wide `$shapes` schema. Used by the `venn()` path, where the precomputed
+#' venn-shape lookup is still expressed as ellipses.
+#' @keywords internal
+ellipse_frame_to_shapes <- function(fpar, shape) {
+  shapes <- new_shape_frame(shape, NROW(fpar), rownames(fpar))
+  shapes$h <- fpar$h
+  shapes$k <- fpar$k
+  shapes$a <- fpar$a
+  shapes$b <- fpar$b
+  shapes$phi <- fpar$phi
+  shapes
+}
+
+#' Project the wide `$shapes` schema back into the legacy 5-column
+#' (h, k, a, b, phi) ellipse data frame for circle/ellipse fits. Preserves
+#' the row order and row names so back-compat consumers see exactly the
+#' shape they used to.
+#' @keywords internal
+shapes_to_ellipse_frame <- function(shapes) {
+  data.frame(
+    h = shapes$h,
+    k = shapes$k,
+    a = shapes$a,
+    b = shapes$b,
+    phi = shapes$phi,
+    row.names = rownames(shapes),
+    stringsAsFactors = TRUE
+  )
+}
+
+# Translate the legacy (loss, loss_aggregator) pair into a single
+# eunoia-style loss name, warning on use of either deprecated form.
+resolve_loss <- function(loss, loss_aggregator) {
+  loss_choices <- c(
+    "sum_squared",
+    "sum_absolute",
+    "sum_absolute_region_error",
+    "sum_squared_region_error",
+    "max_absolute",
+    "max_squared",
+    "root_mean_squared",
+    "stress",
+    "diag_error"
+  )
+  legacy_loss <- c("square", "abs", "region")
+
+  # The unmodified default vector means the caller supplied no `loss`; pick
+  # the first option without requiring the upstream defaults to be a literal
+  # match for `loss_choices`.
+  if (length(loss) > 1L) {
+    if (!is.null(loss_aggregator)) {
+      warning(
+        "`loss_aggregator` is deprecated and will be removed in a future ",
+        "version of eulerr. Pick a `loss` value directly instead.",
+        call. = FALSE
+      )
+    }
+    return(loss_choices[1L])
+  }
+
+  if (!is.null(loss_aggregator)) {
+    warning(
+      "`loss_aggregator` is deprecated and will be removed in a future ",
+      "version of eulerr. Pick a `loss` value directly instead.",
+      call. = FALSE
+    )
+    loss_aggregator <- match.arg(loss_aggregator, c("sum", "max"))
+  }
+
+  if (loss %in% legacy_loss) {
+    agg <- if (is.null(loss_aggregator)) "sum" else loss_aggregator
+    new_loss <- switch(
+      paste(loss, agg, sep = "_"),
+      square_sum = "sum_squared",
+      square_max = "max_squared",
+      abs_sum = "sum_absolute",
+      abs_max = "max_absolute",
+      region_sum = "sum_absolute_region_error",
+      region_max = "diag_error"
+    )
+    warning(
+      "Loss value '",
+      loss,
+      "' is deprecated. Use loss = '",
+      new_loss,
+      "' instead.",
+      call. = FALSE
+    )
+    loss <- new_loss
+  }
+
+  match.arg(loss, loss_choices)
 }

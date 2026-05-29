@@ -10,16 +10,32 @@ tally_combinations <- function(sets, weights) {
   if (!is.matrix(sets)) {
     sets <- as.matrix(sets)
   }
+  setnames <- colnames(sets)
 
-  id <- bit_indexr(NCOL(sets))
-  tally <- double(NROW(id))
-
-  for (i in seq_len(NROW(id))) {
-    tally[i] <-
-      sum(as.numeric(colSums(t(sets) == id[i, ]) == NCOL(sets)) * weights)
-    names(tally)[i] <- paste0(colnames(sets)[id[i, ]], collapse = "&")
+  if (NROW(sets) == 0L || NCOL(sets) == 0L) {
+    return(numeric(0))
   }
-  tally
+
+  m <- sets != 0
+  patterns <- apply(m, 1L, function(row) paste(setnames[row], collapse = "&"))
+  keep <- nzchar(patterns)
+
+  if (any(keep)) {
+    tap <- tapply(weights[keep], patterns[keep], sum)
+    counts <- as.numeric(tap)
+    names(counts) <- names(tap)
+  } else {
+    counts <- numeric(0)
+  }
+
+  singletons <- stats::setNames(numeric(length(setnames)), setnames)
+  shared <- intersect(setnames, names(counts))
+  if (length(shared) > 0L) {
+    singletons[shared] <- counts[shared]
+  }
+  multi <- counts[setdiff(names(counts), setnames)]
+
+  c(singletons, multi)
 }
 
 #' Rescale values to new range
@@ -82,6 +98,14 @@ is_false <- function(x) {
   identical(x, FALSE)
 }
 
+#' Null-coalesce: returns `y` when `x` is `NULL`, else `x`. Local
+#' polyfill so we keep the R >= 4.2 floor (base `%||%` is 4.4+).
+#' @keywords internal
+#' @noRd
+`%||%` <- function(x, y) {
+  if (is.null(x)) y else x
+}
+
 #' Check if a vector is an integer
 #'
 #' @param x a vector
@@ -102,45 +126,32 @@ is_real <- function(x, tol = .Machine$double.eps^0.5) {
   is.numeric(x) && !is_integer(x, tol = )
 }
 
-#' Binary indices
+#' Enumerate all 2^n - 1 combination labels for a set of names
 #'
-#' Wraps around bit_indexr().
+#' Generates labels in cardinality-first order: singletons first, then pairs,
+#' then triples, etc. Within each cardinality, set names appear in their
+#' original order. Used only by the Venn path (bounded at n = 5).
 #'
-#' @param n number of items to generate permutations from
+#' @param setnames a character vector of set names
 #'
-#' @return A matrix of logicals.
+#' @return A character vector of length 2^n - 1.
 #' @keywords internal
-bit_indexr <- function(n) {
-  m <- bit_index_cpp(n)
-  mode(m) <- "logical"
-  m
-}
-
-#' regionError
-#'
-#' @param fit fitted values
-#' @param orig original values
-#'
-#' @return regionError
-#' @keywords internal
-regionError <- function(fit, orig) {
-  abs(fit / sum(fit) - orig / sum(orig))
-}
-
-#' diagError
-#'
-#' @param fit fitted values
-#' @param orig original values
-#' @param regionError regionError
-#'
-#' @return diagError
-#' @keywords internal
-diagError <- function(fit, orig, regionError = NULL) {
-  if (!is.null(regionError)) {
-    max(regionError)
-  } else {
-    max(abs(fit / sum(fit) - orig / sum(orig)))
+all_set_combinations <- function(setnames) {
+  n <- length(setnames)
+  if (n == 0L) {
+    return(character(0))
   }
+  out <- character(0)
+  for (k in seq_len(n)) {
+    cmb <- utils::combn(setnames, k)
+    labs <- if (k == 1L) {
+      as.vector(cmb)
+    } else {
+      apply(cmb, 2L, paste, collapse = "&")
+    }
+    out <- c(out, labs)
+  }
+  out
 }
 
 #' Get the number of sets in he input
@@ -152,75 +163,6 @@ diagError <- function(fit, orig, regionError = NULL) {
 n_sets <- function(combinations) {
   combo_names <- strsplit(names(combinations), split = "&", fixed = TRUE)
   length(unique(unlist(combo_names, use.names = FALSE)))
-}
-
-
-#' Set up constraints for optimization
-#'
-#' @param newpars parameters from the first optimizer
-#'
-#' @return A list of lower and upper constraints
-#' @keywords internal
-get_constraints <- function(newpars) {
-  h <- newpars[, 1L]
-  k <- newpars[, 2L]
-  a <- newpars[, 3L]
-  b <- newpars[, 4L]
-  phi <- newpars[, 5L]
-
-  n <- length(h)
-
-  xlim <- sqrt(a^2 * cos(phi)^2 + b^2 * sin(phi)^2)
-  ylim <- sqrt(a^2 * sin(phi)^2 + b^2 * cos(phi)^2)
-  xbnd <- range(xlim + h, -xlim + h)
-  ybnd <- range(ylim + k, -ylim + k)
-
-  lwr <- upr <- double(5L * n)
-
-  for (i in seq_along(h)) {
-    ii <- 5L * (i - 1L)
-
-    lwr[ii + 1L] <- xbnd[1L]
-    lwr[ii + 2L] <- ybnd[1L]
-    lwr[ii + 3L] <- a[i] / 3
-    lwr[ii + 4L] <- b[i] / 3
-    lwr[ii + 5L] <- 0
-
-    upr[ii + 1L] <- xbnd[2L]
-    upr[ii + 2L] <- ybnd[2L]
-    upr[ii + 3L] <- a[i] * 3
-    upr[ii + 4L] <- b[i] * 3
-    upr[ii + 5L] <- pi
-  }
-  list(lwr = lwr, upr = upr)
-}
-
-#' Normalize an angle to [-pi, pi)
-#'
-#' @param x angle in radians
-#'
-#' @return A normalized angle.
-#' @keywords internal
-normalize_angle <- function(x) {
-  a <- (x + pi) %% (2 * pi)
-  ifelse(a >= 0, a - pi, a + pi)
-}
-
-#' Normalize parameters (semiaxes and rotation)
-#'
-#' @param m pars
-#'
-#' @return `m`, normalized
-#' @keywords internal
-normalize_pars <- function(m) {
-  n <- NCOL(m)
-  if (n == 3L) {
-    m[, 3L] <- abs(m[, 3L])
-  } else {
-    m[, 3L:4L] <- abs(m[, 3L:4L])
-    m[, 5L] <- normalize_angle(m[, 5L])
-  }
-  m
 }
 
 #' Blend (average) colors
@@ -255,6 +197,49 @@ setup_gpar <- function(default = list(), user = list(), n) {
   gp <- lapply(gp, function(x) if (is.function(x)) x(n) else x)
 
   do.call(grid::gpar, lapply(gp, rep_len, n))
+}
+
+#' Overlay per-panel overrides onto a styling parameter
+#'
+#' Used to apply `by_group` overrides to `fills`, `patterns`, `edges`, `labels`,
+#' and `quantities` for a single panel produced by `euler(..., by = ...)`. The
+#' override list contains gpar-level fields (and optionally `rot`), which are
+#' overlaid onto `param$gp` (and `param$set_gp` for shape-mode patterns).
+#' Structural fields are not overlaid here — they must be filtered upstream.
+#'
+#' @param param a list with `$gp` (a `grid::gpar`) and optionally `$rot` and/or
+#'   `$set_gp`.
+#' @param override a flat named list of fields to overlay.
+#'
+#' @return The param list with overlaid fields.
+#' @keywords internal
+apply_panel_overrides <- function(param, override) {
+  if (is.null(param) || is.null(override) || length(override) == 0L) {
+    return(param)
+  }
+  overlay_gp <- function(gp) {
+    if (is.null(gp)) {
+      return(gp)
+    }
+    n <- if (length(gp) > 0L) max(lengths(gp), 1L) else 1L
+    for (nm in names(override)) {
+      if (nm == "rot") {
+        next
+      }
+      gp[[nm]] <- rep_len(override[[nm]], n)
+    }
+    gp
+  }
+  if (!is.null(param$gp)) {
+    param$gp <- overlay_gp(param$gp)
+  }
+  if (!is.null(param$set_gp)) {
+    param$set_gp <- overlay_gp(param$set_gp)
+  }
+  if (!is.null(override$rot) && !is.null(param$rot)) {
+    param$rot <- rep_len(override$rot, length(param$rot))
+  }
+  param
 }
 
 #' Dummy code a data.frame
@@ -325,32 +310,6 @@ dummy_code <- function(x, sep = "_", factor_names = TRUE) {
   cbind(x[, !fac_chr, drop = FALSE], out)
 }
 
-#' Stress
-#'
-#' @param orig original values
-#' @param fit fitted values
-#'
-#' @return Stress metric.
-#'
-#' @keywords internal
-stress <- function(orig, fit) {
-  sst <- sum(fit^2)
-  slope <- sum(orig * fit) / sum(orig^2)
-  sse <- sum((fit - orig * slope)^2)
-  sse / sst
-}
-
 nonzero_fit <- function(x) {
   abs(x) / sum(abs(x) + .Machine$double.eps) > 1e-4
-}
-
-make_symmetric <- function(m, from = c("lower", "upper")) {
-  from <- match.arg(from)
-  if (from == "lower") {
-    m[upper.tri(m)] <- t(m)[upper.tri(m)]
-  } else {
-    m[lower.tri(m)] <- t(m)[lower.tri(m)]
-  }
-
-  m
 }

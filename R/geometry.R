@@ -1,45 +1,36 @@
-#' Optimize Distance Between Circles Based On Overlap
+#' Get the bounding box for a row-wise collection of fitted shapes.
 #'
-#' @param r1 radius of circle one
-#' @param r2 radius of circle two
-#' @param overlap overlap (area) of the two circles
+#' Dispatches on the shape kind. Ellipse/circle use the rotated-ellipse
+#' bounding-box formula; rectangle/square use width/height (or side)
+#' directly since both are axis-aligned in eunoia.
 #'
-#' @return The necessary distance between sets to achieve the desired overlap
-#'   area.
+#' @param shapes the `$shapes` data frame of a fitted euler object (after
+#'   dropping NA rows for empty sets), or — for legacy callers — the
+#'   numeric `h` vector. When `h` is numeric the function falls back to
+#'   the legacy ellipse signature for back-compat with external code.
+#' @param k,a,b,phi legacy ellipse parameters; only used when `shapes` is
+#'   numeric (the legacy signature).
+#'
+#' @return The bounding box as a list with `xlim` and `ylim`.
 #' @keywords internal
-separate_two_discs <- function(r1, r2, overlap) {
-  if (r1 > 0 && r2 > 0) {
-    stats::optimize(
-      discdisc,
-      interval = c(abs(r1 - r2), sum(r1, r2)),
-      r1 = r1,
-      r2 = r2,
-      overlap = overlap,
-      tol = sqrt(.Machine$double.eps)
-    )$minimum
-  } else {
-    0
+get_bounding_box <- function(shapes, k = NULL, a = NULL, b = NULL, phi = NULL) {
+  if (is.data.frame(shapes)) {
+    return(shape_bounding_box(shapes))
   }
-}
-
-#' Get the bounding box of an ellipse
-#'
-#' @param h x-coordinate for the center
-#' @param k y-coordinate for the center
-#' @param a radius or semi-major axis
-#' @param b semi-minor axis
-#' @param phi rotation
-#'
-#' @return The bounding box as a list with xlim and ylim
-#' @keywords internal
-get_bounding_box <- function(h, k, a, b = NULL, phi = NULL) {
+  # Legacy numeric signature: get_bounding_box(h, k, a, b, phi).
+  h <- shapes
   if (is.null(b)) {
     b <- a
   }
   if (is.null(phi)) {
     phi <- 0
   }
+  ellipse_bounding_box(h, k, a, b, phi)
+}
 
+#' Bounding box of a vector of rotated ellipses.
+#' @keywords internal
+ellipse_bounding_box <- function(h, k, a, b, phi) {
   xlim <- sqrt(a^2 * cos(phi)^2 + b^2 * sin(phi)^2)
   ylim <- sqrt(a^2 * sin(phi)^2 + b^2 * cos(phi)^2)
 
@@ -49,69 +40,36 @@ get_bounding_box <- function(h, k, a, b = NULL, phi = NULL) {
   )
 }
 
-#' Plotting coordinates for an ellipse
-#'
-#' @param h x coordinates
-#' @param k y coordinates
-#' @param a semimajor axis
-#' @param b semiminor axis
-#' @param phi rotation
-#' @param n number of plotting points
-#'
-#' @return A list of matrices of coordinates for the ellipses.
+#' Per-shape bounding box dispatch. Reads the `type` tag on `shapes` (rows
+#' are assumed to share a tag since a diagram fixes one shape kind), then
+#' picks the appropriate width/height calculation. Falls back to the
+#' rotated-ellipse formula when the type is unknown so external callers
+#' constructing ad-hoc `$shapes` frames still get a sensible box.
 #' @keywords internal
-ellipse <- function(h, k, a, b = a, phi = 0, n = 200L) {
-  theta <- seq.int(0, 2 * pi, length.out = n)
-  m <- length(h)
-  out <- vector("list", m)
-  for (i in seq_along(h)) {
-    out[[i]]$x <-
-      h[i] + a[i] * cos(theta) * cos(phi[i]) - b[i] * sin(theta) * sin(phi[i])
-    out[[i]]$y <-
-      k[i] + b[i] * sin(theta) * cos(phi[i]) + a[i] * cos(theta) * sin(phi[i])
+shape_bounding_box <- function(shapes) {
+  if (NROW(shapes) == 0L) {
+    return(list(xlim = c(-1, 1), ylim = c(-1, 1)))
   }
-  out
-}
-
-#' Polygon Clipping
-#'
-#' This function is provided to efficiently and safely handle clipping
-#' operations. It wraps around [polyclip::polyclip()], which is an
-#' interface to the **Clipper** C++ library.
-#'
-#' @param a polygon
-#' @param b polygon
-#' @param op operation
-#'
-#' @return A list of lists.
-#' @keywords internal
-poly_clip <- function(a, b, op = c("intersection", "union", "minus", "xor")) {
-  op <- match.arg(op)
-  a0 <- identical(length(a), 0L)
-  b0 <- identical(length(b), 0L)
-
-  if (op == "intersection") {
-    if (a0 || b0) {
-      return(list())
-    }
-  } else if (op == "union") {
-    if (a0 && !b0) {
-      return(b)
-    } else if (!a0 && b0) {
-      return(a)
-    } else if (!a0 && !b0) {
-      if (all(unlist(a) == unlist(b))) {
-        return(a)
-      }
-    } else {
-      return(list())
-    }
-  } else if (op == "minus") {
-    if (!a0 && b0) {
-      return(a)
-    } else if (a0) {
-      return(list())
-    }
-  }
-  polyclip::polyclip(a, b, op = op)
+  type <- shapes$type[1L]
+  h <- shapes$h
+  k <- shapes$k
+  switch(
+    type,
+    rectangle = {
+      half_w <- shapes$width / 2
+      half_h <- shapes$height / 2
+      list(
+        xlim = range(c(h - half_w, h + half_w)),
+        ylim = range(c(k - half_h, k + half_h))
+      )
+    },
+    square = {
+      half <- shapes$side / 2
+      list(
+        xlim = range(c(h - half, h + half)),
+        ylim = range(c(k - half, k + half))
+      )
+    },
+    ellipse_bounding_box(h, k, shapes$a, shapes$b, shapes$phi)
+  )
 }

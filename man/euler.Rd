@@ -14,9 +14,12 @@ euler(combinations, ...)
 \method{euler}{default}(
   combinations,
   input = c("disjoint", "union"),
-  shape = c("circle", "ellipse"),
-  loss = c("square", "abs", "region"),
-  loss_aggregator = c("sum", "max"),
+  shape = c("circle", "ellipse", "rectangle", "square"),
+  loss = c("sum_squared", "sum_absolute", "sum_absolute_region_error",
+    "sum_squared_region_error", "max_absolute", "max_squared", "root_mean_squared",
+    "stress", "diag_error"),
+  loss_aggregator = NULL,
+  complement = NULL,
   control = list(),
   ...
 )
@@ -47,25 +50,53 @@ data.frame (see \strong{methods (by class)})}
 
 \item{shape}{geometric shape used in the diagram}
 
-\item{loss}{type of loss to minimize over. If \code{"square"} is used together
-with the value \code{"sum"} for \code{loss_aggregator}, then the resulting loss
-function is the sum of squared errors, which is the default.}
+\item{loss}{type of loss to minimize over. The default,
+\code{"sum_squared"}, minimizes the sum of squared errors. The available
+options mirror the loss functions exposed by the \code{eunoia} Rust crate
+that powers the optimizer:
+\itemize{
+\item \code{"sum_squared"} --- normalized sum of squared errors (default).
+\item \code{"sum_absolute"} --- normalized sum of absolute errors.
+\item \code{"sum_absolute_region_error"} --- normalized sum of absolute
+region errors.
+\item \code{"sum_squared_region_error"} --- normalized sum of squared region
+errors.
+\item \code{"max_absolute"} --- normalized maximum absolute error.
+\item \code{"max_squared"} --- normalized maximum squared error.
+\item \code{"root_mean_squared"} --- normalized root-mean-squared error.
+\item \code{"stress"} --- venneuler-style stress.
+\item \code{"diag_error"} --- eulerAPE-style \code{diagError}.
+}}
 
-\item{loss_aggregator}{how the final loss is computed. \code{"sum"} indicates that
-the sum of the losses computed by \code{loss} are summed up. \code{"max"} indicates}
+\item{loss_aggregator}{deprecated; use \code{loss} directly instead. Pre-1.0
+code that combined \code{loss} (\code{"square"}/\code{"abs"}/\code{"region"}) with
+\code{loss_aggregator} (\code{"sum"}/\code{"max"}) still works but emits a warning;
+the combination is mapped to the equivalent new \code{loss} value.}
+
+\item{complement}{an optional single non-negative number giving the area
+of the \emph{complement} — that is, the universe outside every named set.
+When supplied, the fitter jointly optimizes a containing rectangle
+together with the diagram shapes so that the area of the rectangle
+minus the union of (clipped) shapes matches \code{complement}. This is the
+classical "everything not in any set" region; see \code{\link[=plot.euler]{plot.euler()}} for
+how it is rendered. Defaults to \code{NULL} (no container; classical
+shape-only fit). Not supported for \code{\link[=venn]{venn()}}.}
 
 \item{control}{a list of control parameters.
 \itemize{
-\item \code{extraopt}: should the more thorough optimizer (currently
-\code{\link[GenSA:GenSA]{GenSA::GenSA()}}) kick in (provided \code{extraopt_threshold} is exceeded)? The
-default is \code{TRUE} for ellipses and three sets and \code{FALSE} otherwise.
+\item \code{extraopt}: should the global-search fallback optimizer (CMA-ES) kick
+in when the primary optimizer's \code{diagError} exceeds \code{extraopt_threshold}?
+The default is \code{TRUE} for three-set ellipse fits and \code{FALSE} otherwise.
 \item \code{extraopt_threshold}: threshold, in terms of \code{diagError}, for when
-the extra optimizer kicks in. This will almost always slow down the
-process considerably. A value of 0 means
-that the extra optimizer will kick in if there is \emph{any} error. A value of
-1 means that it will never kick in. The default is \code{0.001}.
-\item \code{extraopt_control}: a list of control parameters to pass to the
-extra optimizer, such as \code{max.call}. See \code{\link[GenSA:GenSA]{GenSA::GenSA()}}.
+the CMA-ES fallback kicks in. A value of 0 means it will kick in for
+\emph{any} error; a value of 1 means it will never kick in. Default \code{0.001}.
+\item \code{tolerance}: convergence tolerance passed to the underlying solver.
+Tighter values give more accurate fits at higher cost. Default \code{1e-8}.
+\item \code{max_sets}: maximum number of sets the underlying engine will accept.
+Defaults to \code{NULL}, which uses the engine's built-in default of 32.
+Region masks are stored in a bitset, so values may be raised up to 63
+(the absolute hard cap). Going higher is rarely useful in practice
+since fully-overlapping diagrams have \code{2^n - 1} regions.
 }}
 
 \item{weights}{a numeric vector of weights of the same length as
@@ -82,8 +113,16 @@ constructing dummy codes}
 }
 \value{
 A list object of class \code{'euler'} with the following parameters.
-\item{ellipses}{a matrix of \code{h} and \code{k} (x and y-coordinates for the
-centers of the shapes), semiaxes \code{a} and \code{b}, and rotation angle \code{phi}}
+\item{shapes}{a data frame of fitted shape parameters. One row per set
+with a \code{type} column (one of \code{"circle"}, \code{"ellipse"}, \code{"rectangle"},
+\code{"square"}), the center coordinates \code{h} and \code{k}, and the
+shape-specific columns: \code{a}, \code{b}, \code{phi} for ellipses/circles; \code{width}
+and \code{height} for rectangles; \code{side} (plus mirrored \code{width}/\code{height})
+for squares. Columns that don't apply to the chosen shape are \code{NA}.}
+\item{ellipses}{for \code{shape = "circle"} and \code{shape = "ellipse"} fits,
+the legacy 5-column data frame of \code{h}, \code{k}, \code{a}, \code{b}, \code{phi}. This
+slot is deprecated in favour of \code{shapes} and is not populated for
+rectangle/square fits.}
 \item{original.values}{set relationships in the input}
 \item{fitted.values}{set relationships in the solution}
 \item{residuals}{residuals}
@@ -95,7 +134,8 @@ disjoint subset in the input and the respective area in the output}
 \description{
 Fit Euler diagrams (a generalization of Venn diagrams) using numerical
 optimization to find exact or approximate solutions to a specification of set
-relationships. The shape of the diagram may be a circle or an ellipse.
+relationships. The shape of the diagram may be a circle, an ellipse, an
+axis-aligned rectangle, or an axis-aligned square.
 }
 \details{
 If the input is a matrix or data frame and argument \code{by} is specified,

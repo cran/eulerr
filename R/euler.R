@@ -2,7 +2,8 @@
 #'
 #' Fit Euler diagrams (a generalization of Venn diagrams) using numerical
 #' optimization to find exact or approximate solutions to a specification of set
-#' relationships. The shape of the diagram may be a circle or an ellipse.
+#' relationships. The shape of the diagram may be a circle, an ellipse, an
+#' axis-aligned rectangle, or an axis-aligned square.
 #'
 #' If the input is a matrix or data frame and argument `by` is specified,
 #' the function returns a list of euler diagrams.
@@ -52,28 +53,60 @@
 #' @param input type of input: disjoint identities
 #'   (`'disjoint'`) or unions (`'union'`).
 #' @param shape geometric shape used in the diagram
-#' @param loss type of loss to minimize over. If `"square"` is used together
-#'   with the value `"sum"` for `loss_aggregator`, then the resulting loss
-#'   function is the sum of squared errors, which is the default.
-#' @param loss_aggregator how the final loss is computed. `"sum"` indicates that
-#'   the sum of the losses computed by `loss` are summed up. `"max"` indicates
-#"   that only the maximum value computed by the loss function is used.
+#' @param loss type of loss to minimize over. The default,
+#'   `"sum_squared"`, minimizes the sum of squared errors. The available
+#'   options mirror the loss functions exposed by the `eunoia` Rust crate
+#'   that powers the optimizer:
+#'   * `"sum_squared"` --- normalized sum of squared errors (default).
+#'   * `"sum_absolute"` --- normalized sum of absolute errors.
+#'   * `"sum_absolute_region_error"` --- normalized sum of absolute
+#'     region errors.
+#'   * `"sum_squared_region_error"` --- normalized sum of squared region
+#'     errors.
+#'   * `"max_absolute"` --- normalized maximum absolute error.
+#'   * `"max_squared"` --- normalized maximum squared error.
+#'   * `"root_mean_squared"` --- normalized root-mean-squared error.
+#'   * `"stress"` --- venneuler-style stress.
+#'   * `"diag_error"` --- eulerAPE-style `diagError`.
+#' @param loss_aggregator deprecated; use `loss` directly instead. Pre-1.0
+#'   code that combined `loss` (`"square"`/`"abs"`/`"region"`) with
+#'   `loss_aggregator` (`"sum"`/`"max"`) still works but emits a warning;
+#'   the combination is mapped to the equivalent new `loss` value.
+#' @param complement an optional single non-negative number giving the area
+#'   of the *complement* — that is, the universe outside every named set.
+#'   When supplied, the fitter jointly optimizes a containing rectangle
+#'   together with the diagram shapes so that the area of the rectangle
+#'   minus the union of (clipped) shapes matches `complement`. This is the
+#'   classical "everything not in any set" region; see [plot.euler()] for
+#'   how it is rendered. Defaults to `NULL` (no container; classical
+#'   shape-only fit). Not supported for [venn()].
 #' @param control a list of control parameters.
-#'   * `extraopt`: should the more thorough optimizer (currently
-#'   [GenSA::GenSA()]) kick in (provided `extraopt_threshold` is exceeded)? The
-#'   default is `TRUE` for ellipses and three sets and `FALSE` otherwise.
+#'   * `extraopt`: should the global-search fallback optimizer (CMA-ES) kick
+#'   in when the primary optimizer's `diagError` exceeds `extraopt_threshold`?
+#'   The default is `TRUE` for three-set ellipse fits and `FALSE` otherwise.
 #'   * `extraopt_threshold`: threshold, in terms of `diagError`, for when
-#'   the extra optimizer kicks in. This will almost always slow down the
-#'   process considerably. A value of 0 means
-#'   that the extra optimizer will kick in if there is *any* error. A value of
-#'   1 means that it will never kick in. The default is `0.001`.
-#'   * `extraopt_control`: a list of control parameters to pass to the
-#'   extra optimizer, such as `max.call`. See [GenSA::GenSA()].
+#'   the CMA-ES fallback kicks in. A value of 0 means it will kick in for
+#'   *any* error; a value of 1 means it will never kick in. Default `0.001`.
+#'   * `tolerance`: convergence tolerance passed to the underlying solver.
+#'   Tighter values give more accurate fits at higher cost. Default `1e-8`.
+#'   * `max_sets`: maximum number of sets the underlying engine will accept.
+#'   Defaults to `NULL`, which uses the engine's built-in default of 32.
+#'   Region masks are stored in a bitset, so values may be raised up to 63
+#'   (the absolute hard cap). Going higher is rarely useful in practice
+#'   since fully-overlapping diagrams have `2^n - 1` regions.
 #' @param ... arguments passed down to other methods
 #'
 #' @return A list object of class `'euler'` with the following parameters.
-#'   \item{ellipses}{a matrix of `h` and `k` (x and y-coordinates for the
-#'     centers of the shapes), semiaxes `a` and `b`, and rotation angle `phi`}
+#'   \item{shapes}{a data frame of fitted shape parameters. One row per set
+#'     with a `type` column (one of `"circle"`, `"ellipse"`, `"rectangle"`,
+#'     `"square"`), the center coordinates `h` and `k`, and the
+#'     shape-specific columns: `a`, `b`, `phi` for ellipses/circles; `width`
+#'     and `height` for rectangles; `side` (plus mirrored `width`/`height`)
+#'     for squares. Columns that don't apply to the chosen shape are `NA`.}
+#'   \item{ellipses}{for `shape = "circle"` and `shape = "ellipse"` fits,
+#'     the legacy 5-column data frame of `h`, `k`, `a`, `b`, `phi`. This
+#'     slot is deprecated in favour of `shapes` and is not populated for
+#'     rectangle/square fits.}
 #'   \item{original.values}{set relationships in the input}
 #'   \item{fitted.values}{set relationships in the solution}
 #'   \item{residuals}{residuals}
@@ -129,14 +162,23 @@ euler <- function(combinations, ...) UseMethod("euler")
 euler.default <- function(
   combinations,
   input = c("disjoint", "union"),
-  shape = c("circle", "ellipse"),
-  loss = c("square", "abs", "region"),
-  loss_aggregator = c("sum", "max"),
+  shape = c("circle", "ellipse", "rectangle", "square"),
+  loss = c(
+    "sum_squared",
+    "sum_absolute",
+    "sum_absolute_region_error",
+    "sum_squared_region_error",
+    "max_absolute",
+    "max_squared",
+    "root_mean_squared",
+    "stress",
+    "diag_error"
+  ),
+  loss_aggregator = NULL,
+  complement = NULL,
   control = list(),
   ...
 ) {
-  loss <- match.arg(loss)
-
   fit_diagram(
     combinations,
     "euler",
@@ -144,7 +186,8 @@ euler.default <- function(
     shape,
     loss,
     loss_aggregator,
-    control,
+    complement = complement,
+    control = control,
     ...
   )
 }
@@ -230,5 +273,5 @@ euler.table <- function(combinations, ...) {
 #' euler(plants[c("erigenia", "solanum", "cynodon")])
 euler.list <- function(combinations, ...) {
   out <- parse_list(combinations)
-  euler(out, input = "union", ...)
+  euler(out, input = "disjoint", ...)
 }

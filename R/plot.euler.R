@@ -24,19 +24,19 @@
 #' The various [grid::gpar()] values that are available for each argument
 #' are:
 #'
-#' \tabular{lccccccc}{
-#'              \tab fills \tab edges \tab labels \tab quantities  \tab strips \tab legend \tab main \cr
-#'   col        \tab       \tab x     \tab x      \tab x           \tab x      \tab x      \tab x    \cr
-#'   fill       \tab x     \tab       \tab        \tab             \tab        \tab        \tab      \cr
-#'   alpha      \tab x     \tab x     \tab x      \tab x           \tab x      \tab x      \tab x    \cr
-#'   lty        \tab       \tab x     \tab        \tab             \tab        \tab        \tab      \cr
-#'   lwd        \tab       \tab x     \tab        \tab             \tab        \tab        \tab      \cr
-#'   lex        \tab       \tab x     \tab        \tab             \tab        \tab        \tab      \cr
-#'   fontsize   \tab       \tab       \tab x      \tab x           \tab x      \tab x      \tab x    \cr
-#'   cex        \tab       \tab       \tab x      \tab x           \tab x      \tab x      \tab x    \cr
-#'   fontfamily \tab       \tab       \tab x      \tab x           \tab x      \tab x      \tab x    \cr
-#'   lineheight \tab       \tab       \tab x      \tab x           \tab x      \tab x      \tab x    \cr
-#'   font       \tab       \tab       \tab x      \tab x           \tab x      \tab x      \tab x    \cr
+#' \tabular{lcccccccc}{
+#'              \tab fills \tab edges \tab labels \tab quantities  \tab annotations \tab strips \tab legend \tab main \cr
+#'   col        \tab       \tab x     \tab x      \tab x           \tab x           \tab x      \tab x      \tab x    \cr
+#'   fill       \tab x     \tab       \tab        \tab             \tab             \tab        \tab        \tab      \cr
+#'   alpha      \tab x     \tab x     \tab x      \tab x           \tab x           \tab x      \tab x      \tab x    \cr
+#'   lty        \tab       \tab x     \tab        \tab             \tab             \tab        \tab        \tab      \cr
+#'   lwd        \tab       \tab x     \tab        \tab             \tab             \tab        \tab        \tab      \cr
+#'   lex        \tab       \tab x     \tab        \tab             \tab             \tab        \tab        \tab      \cr
+#'   fontsize   \tab       \tab       \tab x      \tab x           \tab x           \tab x      \tab x      \tab x    \cr
+#'   cex        \tab       \tab       \tab x      \tab x           \tab x           \tab x      \tab x      \tab x    \cr
+#'   fontfamily \tab       \tab       \tab x      \tab x           \tab x           \tab x      \tab x      \tab x    \cr
+#'   lineheight \tab       \tab       \tab x      \tab x           \tab x           \tab x      \tab x      \tab x    \cr
+#'   font       \tab       \tab       \tab x      \tab x           \tab x           \tab x      \tab x      \tab x    \cr
 #' }
 #'
 #' Defaults for these values, as well as other parameters of the plots, can
@@ -44,7 +44,16 @@
 #'
 #' If the diagram has been fit using the `data.frame` or `matrix` methods
 #' and using the `by` argument, the plot area will be split into panels for
-#' each combination of the one to two factors.
+#' each combination of the one to two factors. The `fills`, `patterns`, `edges`,
+#' `labels`, `quantities`, and `annotations` arguments each accept an optional
+#' `by_group` entry: a named list of override lists keyed by panel name (the
+#' names of the fitted object). For multi-`by` fits the panel name is the
+#' levels joined by `.`, e.g. `"Male.German"`. Panels not listed in `by_group`
+#' use the top-level settings unchanged. Only graphical fields (and `rot` for
+#' `labels`, `quantities`, and `annotations`) may be overridden per panel;
+#' structural fields such as `quantities$type`, `quantities$format`,
+#' `annotations$labels`, or named-by-subset `fills$fill` must be set at the
+#' top level.
 #'
 #' For users who are looking to plot their diagram using another package,
 #' all the necessary parameters can be collected if the result of this
@@ -64,11 +73,38 @@
 #' @param edges a logical, vector, or list of graphical parameters for the edges
 #'   in the diagram. Vectors are assumed to be colors for the edges.
 #'   See [grid::grid.polyline()].
-#' @param legend a logical scalar or list. If a list,
-#'   the item `side` can be used to set the location of the legend. See
+#' @param legend a logical scalar or list. If a list, the item `side` can be
+#'   used to set the location of the legend and `symbol_size` can be used to scale
+#'   the legend symbols independently of the text size. See
 #'   [grid::grid.legend()].
 #' @param labels a logical, vector, or list. Vectors are assumed to be
-#'   text for the labels. See [grid::grid.text()].
+#'   text for the labels. See [grid::grid.text()]. In addition to the
+#'   `grid::gpar()` fields, the following placement controls are
+#'   supported (delegated to the `eunoia` Rust crate):
+#'   `labels$placement` (`"raycast"` (default), `"force_directed"`, or
+#'   `"elbow"`) selects the strategy used when a label does not fit
+#'   inside its region. `"raycast"` and `"force_directed"` produce
+#'   straight leader lines (the former places the label along the
+#'   centroid→POI ray, the latter relaxes labels with a polygon-aware
+#'   force solver). `"elbow"` produces d3-pie style orthogonal leaders,
+#'   stacking exterior labels in left/right columns reached by a
+#'   three-segment polyline. `labels$margin` (numeric) overrides the
+#'   per-region margin between an exterior label and the diagram
+#'   (default is half the larger of the label's width and height);
+#'   `labels$tether` (`"poi"` (default) or `"boundary"`) chooses where
+#'   the leader line attaches on the source region; `labels$gap`
+#'   controls the visible gap between the leader tip and the label box
+#'   edge — a bare numeric is interpreted as `lines` (font-relative),
+#'   a [grid::unit()] is honored as given, and the default `NULL`
+#'   tracks `eulerr_options()$padding` so the gap matches the spacing
+#'   between label and quantity; `labels$leader` is a list (`col`,
+#'   `alpha`, `lwd`, `lty`, `lex`) styling the leader line drawn from
+#'   the tether to the exterior label. Strategy-specific knobs live in
+#'   their own sublists: `labels$force_directed = list(iterations = ...)`
+#'   sets the iteration cap for the force-directed solver, and
+#'   `labels$elbow = list(min_gap = ...)` sets the minimum vertical
+#'   centre-to-centre spacing between stacked label boxes in an elbow
+#'   column.
 #' @param quantities a logical, vector, or list. Vectors are assumed to be
 #'   text for the quantities' labels, which by
 #'   default are the original values in the input to [euler()]. In addition
@@ -86,10 +122,45 @@
 #'   and `"fraction"`. The first item will be printed first and the second
 #'   will be printed thereafter inside brackets. The default is
 #'   `type = "counts"`.
+#'   For finer control over the rendered text, set `quantities$template` to
+#'   a string with `{counts}`, `{percent}`, and/or `{fraction}` placeholders,
+#'   for example `"{counts}\n{percent}"` to put the count and percentage on
+#'   separate lines or `"n={counts} ({percent})"` for arbitrary layout. When
+#'   `template` is set it overrides `type`; the set of placeholders in the
+#'   template determines which values are computed.
+#' @param annotations free-form per-region text rendered as a third
+#'   stacked element below the quantity (or below the label when no
+#'   quantity is drawn). Accepts a named character vector keyed by
+#'   subset name (e.g. `c(A = "n = 12", "A&B" = "n = 3")`) as a
+#'   shorthand for `list(labels = <vector>)`, or a list with `labels`
+#'   plus [grid::gpar()] fields (`col`, `alpha`, `fontsize`, `cex`,
+#'   `fontfamily`, `lineheight`, `font`, `rot`). Regions absent from
+#'   `labels` are not annotated. The composite tag bbox grows to
+#'   include the annotation, so exterior placement and leader lines
+#'   adapt automatically. Defaults to slightly smaller text than
+#'   `labels` / `quantities` (`cex = 0.8`).
 #' @param strips a list, ignored unless the `'by'` argument
-#'   was used in [euler()]
+#'   was used in [euler()]. In addition to graphical parameters, this
+#'   argument can include `labels = list(top = ..., left = ...)` for custom
+#'   strip labels. Unnamed labels are interpreted in display order. Named
+#'   labels are matched by factor levels and then reordered to display order.
 #' @param bg a logical, character, or list controlling the background grob.
 #'   Character values are interpreted as the background fill color.
+#' @param complement a logical, character, or list controlling the
+#'   container box and complement region for diagrams fit with
+#'   `complement =` in [euler()]. `TRUE` (default) draws the container
+#'   with a dashed outline (`lty = 2`), no fill, and the complement count
+#'   inside the complement region. `FALSE` suppresses the container and
+#'   its label entirely. A character value is treated as a fill color
+#'   shorthand. A list accepts `fill`, `alpha`, `col`, `lty`, `lwd`,
+#'   `lex` (outline + label gpar), `fontsize`, `cex`, `font`, `fontfamily`,
+#'   `lineheight` (label only), and `label` (custom text — defaults to the
+#'   complement count). Also accepts the same placement controls as
+#'   `labels` (`placement`, `margin`, `tether`, `gap`, `leader`,
+#'   `force_directed`, `elbow`)
+#'   for the complement count label. Has no effect if the diagram was
+#'   fit without `complement =`. Defaults can be set via
+#'   `eulerr_options(complement = ...)`.
 #' @param n number of vertices for the `edges` and `fills`
 #' @param main a title for the plot in the form of a
 #'   character, expression, list or something that can be
@@ -100,6 +171,9 @@
 #' @param ... parameters to update `fills` and `edges` with and thereby a shortcut
 #'   to set these parameters
 #'   [grid::grid.text()].
+#' @param rotate a numeric value giving the angle in degrees by which to rotate
+#'   the entire diagram layout. Positive values rotate counter-clockwise.
+#'   Defaults to `0` (no rotation).
 #' @param adjust_labels a logical. If `TRUE`, adjustment will be made to avoid
 #'   overlaps or out-of-limits plotting of labels, quantities, and
 #'   percentages.
@@ -123,6 +197,13 @@
 #' # Add quantities to the plot
 #' plot(fit, quantities = TRUE)
 #'
+#' # Add free-form per-region annotations below the counts
+#' plot(
+#'   fit,
+#'   quantities = TRUE,
+#'   annotations = c(A = "mean = 35", "A&B" = "mean = 41")
+#' )
+#'
 #' # Add a custom legend and retain quantities
 #' plot(fit, quantities = TRUE, legend = list(labels = c("foo", "bar")))
 #'
@@ -134,6 +215,17 @@
 #'
 #' # Plots using 'by' argument
 #' plot(euler(fruits[, 1:4], by = list(sex)), legend = TRUE)
+#'
+#' # Per-panel styling with `by_group`
+#' plot(
+#'   venn(fruits[, 1:4], by = list(sex)),
+#'   quantities = list(
+#'     by_group = list(
+#'       male = list(col = "steelblue"),
+#'       female = list(col = "tomato")
+#'     )
+#'   )
+#' )
 plot.euler <- function(
   x,
   fills = TRUE,
@@ -142,9 +234,12 @@ plot.euler <- function(
   legend = FALSE,
   labels = identical(legend, FALSE),
   quantities = FALSE,
+  annotations = NULL,
   strips = NULL,
   bg = FALSE,
   main = NULL,
+  complement = TRUE,
+  rotate = 0,
   n = 200L,
   adjust_labels = TRUE,
   ...
@@ -157,7 +252,6 @@ plot.euler <- function(
   opar <- eulerr_options()
 
   groups <- attr(x, "groups")
-  fills_user <- fills
   dots <- list(...)
 
   do_custom_legend <- grid::is.grob(legend)
@@ -167,39 +261,228 @@ plot.euler <- function(
   do_edges <- !is_false(edges) && !is.null(edges)
   do_labels <- !is_false(labels) && !is.null(labels)
   do_quantities <- !is_false(quantities) && !is.null(quantities)
+  do_annotations <- !is_false(annotations) && !is.null(annotations)
   do_legend <- !is_false(legend) && !is.null(legend)
   do_groups <- !is.null(groups)
   do_strips <- !is_false(strips) && do_groups
   do_bg <- !is_false(bg) && !is.null(bg)
   do_main <- is.character(main) || is.expression(main) || is.list(main)
 
-  ellipses <- if (do_groups) x[[1L]]$ellipses else x$ellipses
+  has_container <- if (do_groups) {
+    any(vapply(x, function(xi) !is.null(xi$container), logical(1)))
+  } else {
+    !is.null(x$container)
+  }
+  do_complement <- has_container &&
+    !is_false(complement) &&
+    !is.null(complement)
 
-  n_e <- NROW(ellipses)
-  n_id <- 2^n_e - 1
-  id <- bit_indexr(n_e)
+  # Extract per-panel overrides (`by_group`) from each styling parameter so the
+  # existing normalization sees a clean list. These are re-applied later, once
+  # per panel, inside the setup_grobs loop.
+  panel_override_fields <- list(
+    fills = c("fill", "alpha"),
+    patterns = c("angle", "col", "lwd", "alpha"),
+    edges = c("col", "alpha", "lex", "lwd", "lty"),
+    labels = c(
+      "col",
+      "alpha",
+      "fontsize",
+      "cex",
+      "fontfamily",
+      "lineheight",
+      "font",
+      "rot"
+    ),
+    quantities = c(
+      "col",
+      "alpha",
+      "fontsize",
+      "cex",
+      "fontfamily",
+      "lineheight",
+      "font",
+      "rot"
+    ),
+    annotations = c(
+      "col",
+      "alpha",
+      "fontsize",
+      "cex",
+      "fontfamily",
+      "lineheight",
+      "font",
+      "rot"
+    )
+  )
+  pop_by_group <- function(param, name) {
+    if (!is.list(param) || is.null(param$by_group)) {
+      return(list(param = param, by_group = NULL))
+    }
+    by_group <- param$by_group
+    param$by_group <- NULL
+    if (!do_groups) {
+      stop(
+        "`",
+        name,
+        "$by_group` requires a diagram fit with `by =`."
+      )
+    }
+    if (!is.list(by_group) || length(by_group) == 0L) {
+      stop("`", name, "$by_group` must be a non-empty named list.")
+    }
+    keys <- names(by_group)
+    if (is.null(keys) || any(!nzchar(keys))) {
+      stop("`", name, "$by_group` must be a fully named list.")
+    }
+    valid_keys <- names(x)
+    unknown <- setdiff(keys, valid_keys)
+    if (length(unknown) > 0L) {
+      stop(
+        "`",
+        name,
+        "$by_group` has unknown keys: ",
+        paste(unknown, collapse = ", "),
+        ". Valid keys: ",
+        paste(valid_keys, collapse = ", "),
+        "."
+      )
+    }
+    allowed <- panel_override_fields[[name]]
+    for (key in keys) {
+      override <- by_group[[key]]
+      if (!is.list(override)) {
+        stop(
+          "`",
+          name,
+          "$by_group$",
+          key,
+          "` must be a list."
+        )
+      }
+      bad <- setdiff(names(override), allowed)
+      if (length(bad) > 0L) {
+        stop(
+          "`",
+          name,
+          "$by_group$",
+          key,
+          "` contains fields that cannot be overridden per panel: ",
+          paste(bad, collapse = ", "),
+          ". Allowed fields: ",
+          paste(allowed, collapse = ", "),
+          "."
+        )
+      }
+    }
+    list(param = param, by_group = by_group)
+  }
 
-  setnames <- rownames(ellipses)
-  colnames(id) <- setnames
-  rownames(id) <- apply(id, 1L, function(i) paste(setnames[i], collapse = "&"))
+  fills_split <- pop_by_group(fills, "fills")
+  fills <- fills_split$param
+  fills_by_group <- fills_split$by_group
+
+  patterns_split <- pop_by_group(patterns, "patterns")
+  patterns <- patterns_split$param
+  patterns_by_group <- patterns_split$by_group
+
+  edges_split <- pop_by_group(edges, "edges")
+  edges <- edges_split$param
+  edges_by_group <- edges_split$by_group
+
+  labels_split <- pop_by_group(labels, "labels")
+  labels <- labels_split$param
+  labels_by_group <- labels_split$by_group
+
+  quantities_split <- pop_by_group(quantities, "quantities")
+  quantities <- quantities_split$param
+  quantities_by_group <- quantities_split$by_group
+
+  annotations_split <- pop_by_group(annotations, "annotations")
+  annotations <- annotations_split$param
+  annotations_by_group <- annotations_split$by_group
+
+  fills_user <- fills
+
+  shapes <- if (do_groups) x[[1L]]$shapes else x$shapes
+
+  n_e <- NROW(shapes)
+
+  setnames <- rownames(shapes)
+  setnames_orig <- setnames
+
+  # Build a sparse combo_labels that places singletons (in input order) first,
+  # then multi-set combos in cardinality + lexicographic order. This is the
+  # working set of regions for the entire plot pipeline.
+  if (do_groups) {
+    all_labels <- unique(unlist(
+      lapply(x, function(xi) names(xi$fitted.values)),
+      use.names = FALSE
+    ))
+  } else {
+    all_labels <- names(x$fitted.values)
+  }
+  singletons_present <- intersect(setnames_orig, all_labels)
+  multi_labels <- setdiff(all_labels, singletons_present)
+  multi_card <- lengths(strsplit(multi_labels, "&", fixed = TRUE))
+  multi_labels <- multi_labels[order(multi_card, multi_labels)]
+  combo_labels <- c(singletons_present, multi_labels)
+  combo_sets <- strsplit(combo_labels, "&", fixed = TRUE)
+  n_id <- length(combo_labels)
+
+  # Sparse equivalent of the legacy bit_indexr `id` matrix: rows are populated
+  # combinations (in `combo_labels` order), columns are sets (in `setnames_orig`
+  # order). id[i, j] is TRUE iff combination i includes set j.
+  if (n_id > 0L && n_e > 0L) {
+    id <- t(vapply(
+      combo_sets,
+      function(s) setnames_orig %in% s,
+      logical(n_e)
+    ))
+    if (n_id == 1L) {
+      id <- matrix(id, nrow = 1L)
+    }
+    dimnames(id) <- list(combo_labels, setnames_orig)
+  } else {
+    id <- matrix(
+      FALSE,
+      nrow = n_id,
+      ncol = n_e,
+      dimnames = list(combo_labels, setnames_orig)
+    )
+  }
+
+  align_fitted <- function(xi) {
+    out <- xi$fitted.values[combo_labels]
+    out[is.na(out)] <- 0
+    out
+  }
 
   if (do_groups) {
-    res <- lapply(x, function(xi) is.na(xi$ellipses)[, 1L])
+    res <- lapply(x, function(xi) is.na(xi$shapes$h))
     empty_sets <- apply(do.call(rbind, res), 2, all)
 
-    empty_subsets <- rowSums(id[, empty_sets, drop = FALSE]) > 0
+    empty_subsets <- if (any(empty_sets)) {
+      rowSums(id[, empty_sets, drop = FALSE]) > 0
+    } else {
+      logical(n_id)
+    }
 
     res <- lapply(x, function(xi) {
-      fitted <- xi$fitted.values[!empty_subsets]
+      fitted <- align_fitted(xi)[!empty_subsets]
       nonzero <- nonzero_fit(fitted)
       ifelse(is.na(nonzero), FALSE, nonzero)
     })
 
     nonzero <- apply(do.call(rbind, res), 2, any)
   } else {
-    empty_sets <- is.na(x$ellipses[, 1L])
-    empty_subsets <- rowSums(id[, empty_sets, drop = FALSE]) > 0
-    fitted <- x$fitted.values[!empty_subsets]
+    empty_sets <- is.na(x$shapes$h)
+    empty_subsets <- if (any(empty_sets)) {
+      rowSums(id[, empty_sets, drop = FALSE]) > 0
+    } else {
+      logical(n_id)
+    }
+    fitted <- align_fitted(x)[!empty_subsets]
     nonzero <- nonzero_fit(fitted)
     nonzero <- ifelse(is.na(nonzero), FALSE, nonzero)
   }
@@ -209,9 +492,9 @@ plot.euler <- function(
   if (!do_groups && any(nonzero)) {
     n_overlaps <- integer(n_id)
     single_mass <- logical(n_e)
+    nz <- nonzero_fit(align_fitted(x))
 
     for (i in seq_len(n_e)) {
-      nz <- nonzero_fit(x$fitted.values)
       nzi <- nz & id[, i]
 
       if (sum(nzi) == 1) {
@@ -222,12 +505,16 @@ plot.euler <- function(
     }
 
     complete_overlaps <- n_overlaps > 1
+    co_idx <- which(complete_overlaps)
 
-    merge_sets <- id[complete_overlaps, ] & single_mass
-
-    if (any(merge_sets)) {
-      setnames[merge_sets] <- paste(setnames[merge_sets], collapse = ",")
-      merged_sets[which(merge_sets)[length(which(merge_sets))]] <- TRUE
+    if (length(co_idx) > 0L) {
+      for (idx in co_idx) {
+        merge_sets <- id[idx, ] & single_mass
+        if (any(merge_sets)) {
+          setnames[merge_sets] <- paste(setnames[merge_sets], collapse = ",")
+          merged_sets[which(merge_sets)[length(which(merge_sets))]] <- TRUE
+        }
+      }
     }
   }
 
@@ -284,13 +571,17 @@ plot.euler <- function(
           default_fill <- default_fill(n_e)
         }
         n_default <- length(default_fill)
-        if (n_default == n_e && n_default < n_id) {
-          default_map <- rep(NA_character_, n_id)
-          default_map[seq_len(n_e)] <- default_fill
-          for (ii in (n_e + 1L):n_id) {
-            default_map[ii] <- mix_colors(default_map[which(id[ii, ])])
+        if (n_default == n_e && n_default != n_id) {
+          per_set <- default_fill
+          default_fill <- character(n_id)
+          for (ii in seq_len(n_id)) {
+            set_idx <- which(id[ii, ])
+            if (length(set_idx) == 1L) {
+              default_fill[ii] <- per_set[set_idx]
+            } else if (length(set_idx) > 1L) {
+              default_fill[ii] <- mix_colors(per_set[set_idx])
+            }
           }
-          default_fill <- default_map
         } else if (n_default == 1L || n_default == n_id) {
           default_fill <- rep_len(default_fill, n_id)
         } else {
@@ -312,9 +603,16 @@ plot.euler <- function(
     }
 
     n_fills <- length(fills_out$fill)
-    if (n_fills == n_e && n_fills < n_id) {
-      for (i in (n_fills + 1L):n_id) {
-        fills_out$fill[i] <- mix_colors(fills_out$fill[which(id[i, ])])
+    if (n_fills == n_e && n_fills != n_id) {
+      per_set <- fills_out$fill
+      fills_out$fill <- character(n_id)
+      for (i in seq_len(n_id)) {
+        set_idx <- which(id[i, ])
+        if (length(set_idx) == 1L) {
+          fills_out$fill[i] <- per_set[set_idx]
+        } else if (length(set_idx) > 1L) {
+          fills_out$fill[i] <- mix_colors(per_set[set_idx])
+        }
       }
     } else if (!(n_fills %in% c(1L, n_id))) {
       stop("`fills$fill` must have length 1, n_sets, or n_subsets.")
@@ -418,8 +716,10 @@ plot.euler <- function(
         named_sets <- intersect(pattern_type_names, setnames)
         named_subsets <- intersect(pattern_type_names, subset_names)
 
-        if (identical(patterns_out$mode, "union") &&
-          all(pattern_type_names %in% setnames)) {
+        if (
+          identical(patterns_out$mode, "union") &&
+            all(pattern_type_names %in% setnames)
+        ) {
           set_default <- rep_len(opar$patterns$type, n_e)
           names(set_default) <- setnames
           set_default[named_sets] <- unname(patterns_out$type[named_sets])
@@ -427,19 +727,28 @@ plot.euler <- function(
         } else {
           default_type <- opar$patterns$type
           n_default <- length(default_type)
-          if (n_default == n_e && n_default < n_id) {
-            default_map <- rep(NA_character_, n_id)
-            default_map[seq_len(n_e)] <- default_type
-            default_type <- default_map
+          if (n_default == n_e && n_default != n_id) {
+            per_set <- default_type
+            default_type <- rep(NA_character_, n_id)
+            for (ii in seq_len(n_id)) {
+              set_idx <- which(id[ii, ])
+              if (length(set_idx) == 1L) {
+                default_type[ii] <- per_set[set_idx]
+              }
+            }
           } else if (n_default == 1L || n_default == n_id) {
             default_type <- rep_len(default_type, n_id)
           } else {
-            stop("Default `patterns$type` must have length 1, n_sets, or n_subsets.")
+            stop(
+              "Default `patterns$type` must have length 1, n_sets, or n_subsets."
+            )
           }
 
           type_map <- default_type
           names(type_map) <- subset_names
-          if (identical(patterns_out$mode, "union") && length(named_sets) > 0L) {
+          if (
+            identical(patterns_out$mode, "union") && length(named_sets) > 0L
+          ) {
             for (set_name in named_sets) {
               type_map[id[, set_name]] <- patterns_out$type[[set_name]]
             }
@@ -491,10 +800,27 @@ plot.euler <- function(
     if (n_types %in% c(1L, n_id)) {
       pattern_mode <- "intersection"
       patterns_out$type <- rep_len(patterns_out$type, n_id)
-      patterns_out$angle <- expand_pattern_param(patterns_out$angle, "angle", rep(TRUE, n_e))
-      patterns_out$col <- expand_pattern_param(patterns_out$col, "col", rep(TRUE, n_e), default = NA_character_)
-      patterns_out$lwd <- expand_pattern_param(patterns_out$lwd, "lwd", rep(TRUE, n_e))
-      patterns_out$alpha <- expand_pattern_param(patterns_out$alpha, "alpha", rep(TRUE, n_e))
+      patterns_out$angle <- expand_pattern_param(
+        patterns_out$angle,
+        "angle",
+        rep(TRUE, n_e)
+      )
+      patterns_out$col <- expand_pattern_param(
+        patterns_out$col,
+        "col",
+        rep(TRUE, n_e),
+        default = NA_character_
+      )
+      patterns_out$lwd <- expand_pattern_param(
+        patterns_out$lwd,
+        "lwd",
+        rep(TRUE, n_e)
+      )
+      patterns_out$alpha <- expand_pattern_param(
+        patterns_out$alpha,
+        "alpha",
+        rep(TRUE, n_e)
+      )
     } else {
       pattern_mode <- "shape"
       patterns_out$type <- tolower(patterns_out$type)
@@ -578,9 +904,34 @@ plot.euler <- function(
   }
 
   if (do_strips) {
+    strip_labels <- NULL
+    if (is.list(strips) && "labels" %in% names(strips)) {
+      strip_labels <- strips$labels
+      strips$labels <- NULL
+
+      if (!is.null(strip_labels)) {
+        if (!is.list(strip_labels)) {
+          stop(
+            "`strips$labels` must be a list with optional `top` and `left` entries."
+          )
+        }
+        strip_label_names <- names(strip_labels)
+        if (is.null(strip_label_names) || any(!nzchar(strip_label_names))) {
+          stop(
+            "`strips$labels` must be a named list with optional `top` and `left` entries."
+          )
+        }
+        bad_labels <- setdiff(strip_label_names, c("top", "left"))
+        if (length(bad_labels) > 0L) {
+          stop("`strips$labels` only supports `top` and `left` entries.")
+        }
+      }
+    }
+
     strips <- list(
       gp = setup_gpar(opar$strips, strips, n_levels),
-      groups = groups
+      groups = groups,
+      labels = strip_labels
     )
   } else {
     strips <- NULL
@@ -599,6 +950,19 @@ plot.euler <- function(
       labels <- list(labels = labels, rot = opar$labels$rot)
     }
 
+    # Pull placement-related fields out so they don't leak into gpar.
+    placement_fields <- c(
+      "placement",
+      "margin",
+      "tether",
+      "gap",
+      "leader",
+      "force_directed",
+      "elbow"
+    )
+    placement_user <- labels[intersect(names(labels), placement_fields)]
+    labels[placement_fields] <- NULL
+
     labels$rot <- rep_len(labels$rot, n_e)
     labels$gp <- setup_gpar(
       list(
@@ -612,6 +976,24 @@ plot.euler <- function(
       ),
       labels,
       n_e
+    )
+
+    labels$placement <- placement_user$placement %||%
+      opar$labels$placement
+    labels$margin <- placement_user$margin %||% opar$labels$margin
+    labels$tether <- placement_user$tether %||% opar$labels$tether
+    labels$gap <- placement_user$gap %||% opar$labels$gap
+    labels$force_directed <- update_list(
+      opar$labels$force_directed %||% list(),
+      placement_user$force_directed %||% list()
+    )
+    labels$elbow <- update_list(
+      opar$labels$elbow %||% list(),
+      placement_user$elbow %||% list()
+    )
+    labels$leader <- update_list(
+      opar$labels$leader %||% list(),
+      placement_user$leader %||% list()
     )
   } else {
     labels <- NULL
@@ -664,6 +1046,7 @@ plot.euler <- function(
         list(
           labels = NULL,
           type = quantities_type,
+          template = opar$quantities$template,
           rot = opar$quantities$rot,
           format = NULL,
           total = NULL
@@ -674,6 +1057,7 @@ plot.euler <- function(
       quantities <- list(
         labels = NULL,
         type = opar$quantities$type,
+        template = opar$quantities$template,
         rot = opar$quantities$rot,
         format = NULL,
         total = NULL
@@ -682,6 +1066,7 @@ plot.euler <- function(
       quantities <- list(
         labels = quantities,
         type = opar$quantities$type,
+        template = opar$quantities$template,
         rot = opar$quantities$rot,
         format = NULL,
         total = NULL
@@ -697,7 +1082,9 @@ plot.euler <- function(
         all_named <- all(nzchar(lbl_names))
         any_named <- any(nzchar(lbl_names))
         if (any_named && !all_named) {
-          stop("`quantities$labels` must be either fully named or fully unnamed.")
+          stop(
+            "`quantities$labels` must be either fully named or fully unnamed."
+          )
         }
       }
     }
@@ -731,6 +1118,50 @@ plot.euler <- function(
     quantities <- NULL
   }
 
+  # setup annotations
+  if (do_annotations) {
+    if (is.list(annotations)) {
+      annotations <- update_list(
+        list(labels = NULL, rot = opar$annotations$rot),
+        annotations
+      )
+    } else if (isTRUE(annotations)) {
+      annotations <- list(labels = NULL, rot = opar$annotations$rot)
+    } else {
+      annotations <- list(labels = annotations, rot = opar$annotations$rot)
+    }
+
+    if (!is.null(annotations$labels)) {
+      if (!is.character(annotations$labels)) {
+        stop("`annotations$labels` must be a character vector.")
+      }
+      lbl_names <- names(annotations$labels)
+      if (is.null(lbl_names) || any(!nzchar(lbl_names))) {
+        stop(
+          "`annotations$labels` must be a fully named character vector keyed by subset (e.g. `c(A = \"...\", \"A&B\" = \"...\")`)."
+        )
+      }
+    }
+
+    annotations$rot <- rep_len(annotations$rot, n_id)
+
+    annotations$gp <- setup_gpar(
+      list(
+        col = opar$annotations$col,
+        alpha = opar$annotations$alpha,
+        fontsize = opar$annotations$fontsize,
+        cex = opar$annotations$cex,
+        fontfamily = opar$annotations$fontfamily,
+        lineheight = opar$annotations$lineheight,
+        font = opar$annotations$font
+      ),
+      annotations,
+      n_id
+    )
+  } else {
+    annotations <- NULL
+  }
+
   # setup legend
   if (do_custom_legend) {
     legend <- legend
@@ -749,10 +1180,18 @@ plot.euler <- function(
         hgap = opar$legend$hgap,
         vgap = opar$legend$vgap,
         default.units = opar$legend$default.units,
-        pch = opar$legend$pch
+        pch = opar$legend$pch,
+        symbol_size = opar$legend$symbol_size
       ),
       legend
     )
+
+    symbol_size <- if (!is.null(legend$symbol_size)) {
+      legend$symbol_size
+    } else {
+      opar$legend$cex
+    }
+    legend$symbol_size <- NULL
 
     legend$gp <- setup_gpar(
       list(
@@ -769,7 +1208,7 @@ plot.euler <- function(
           0
         },
         cex = opar$legend$cex,
-        fontsize = opar$legend$fontsize / opar$legend$cex,
+        fontsize = opar$legend$fontsize,
         font = opar$legend$font,
         fontfamily = opar$legend$fontfamily,
         lwd = if (do_edges) edges$gp$lwd[!empty_sets & !merged_sets] else 0,
@@ -876,7 +1315,145 @@ plot.euler <- function(
     )
   }
 
-  # set up geometry for diagrams
+  # setup complement (container box + complement count label) styling.
+  # The label text override `label` lives outside the gpar list so it isn't
+  # passed to grid::gpar.
+  if (do_complement) {
+    complement_user <- if (is.list(complement)) {
+      complement
+    } else if (isTRUE(complement)) {
+      list()
+    } else {
+      list(fill = complement)
+    }
+    complement_label <- complement_user$label
+    complement_user$label <- NULL
+
+    # Pull placement fields out so they don't leak into gpar.
+    cplace_fields <- c(
+      "placement",
+      "margin",
+      "tether",
+      "gap",
+      "leader",
+      "force_directed",
+      "elbow"
+    )
+    cplace_user <- complement_user[intersect(
+      names(complement_user),
+      cplace_fields
+    )]
+    complement_user[cplace_fields] <- NULL
+
+    complement <- list(label = complement_label)
+    complement$gp <- setup_gpar(
+      list(
+        fill = opar$complement$fill,
+        alpha = opar$complement$alpha,
+        col = opar$complement$col,
+        lty = opar$complement$lty,
+        lwd = opar$complement$lwd,
+        lex = opar$complement$lex,
+        fontsize = opar$complement$fontsize,
+        cex = opar$complement$cex,
+        font = opar$complement$font,
+        fontfamily = opar$complement$fontfamily,
+        lineheight = opar$complement$lineheight
+      ),
+      complement_user,
+      1
+    )
+    complement$placement <- cplace_user$placement %||%
+      opar$complement$placement
+    complement$margin <- cplace_user$margin %||%
+      opar$complement$margin
+    complement$tether <- cplace_user$tether %||%
+      opar$complement$tether
+    complement$gap <- cplace_user$gap %||% opar$complement$gap
+    complement$force_directed <- update_list(
+      opar$complement$force_directed %||% list(),
+      cplace_user$force_directed %||% list()
+    )
+    complement$elbow <- update_list(
+      opar$complement$elbow %||% list(),
+      cplace_user$elbow %||% list()
+    )
+    complement$leader <- update_list(
+      opar$complement$leader %||% list(),
+      cplace_user$leader %||% list()
+    )
+  } else {
+    complement <- NULL
+  }
+
+  # apply layout rotation if requested
+  if (rotate != 0) {
+    theta <- rotate * pi / 180
+    ct <- cos(theta)
+    st <- sin(theta)
+    # Rotation only updates `phi` for ellipse-like shapes — rectangles and
+    # squares are axis-aligned in eunoia, so there's no in-plane rotation
+    # angle to advance. The geometry itself is still rotated via the (h, k)
+    # update, but the result rotates the centers without re-orienting the
+    # boxes; this matches eunoia's axis-aligned model.
+    rotate_shapes <- function(dd) {
+      h_new <- dd$h * ct - dd$k * st
+      dd$k <- dd$h * st + dd$k * ct
+      dd$h <- h_new
+      if (NROW(dd) > 0L) {
+        type <- dd$type[1L]
+        if (type %in% c("circle", "ellipse")) {
+          dd$phi <- dd$phi + theta
+        }
+      }
+      dd
+    }
+    rotate_ellipse_frame <- function(dd) {
+      if (is.null(dd) || NROW(dd) == 0L) {
+        return(dd)
+      }
+      h_new <- dd$h * ct - dd$k * st
+      dd$k <- dd$h * st + dd$k * ct
+      dd$h <- h_new
+      dd$phi <- dd$phi + theta
+      dd
+    }
+    if (do_groups) {
+      x <- lapply(x, function(xi) {
+        xi$shapes <- rotate_shapes(xi$shapes)
+        if (!is.null(xi$ellipses)) {
+          xi$ellipses <- rotate_ellipse_frame(xi$ellipses)
+        }
+        xi
+      })
+    } else {
+      x$shapes <- rotate_shapes(x$shapes)
+      if (!is.null(x$ellipses)) {
+        x$ellipses <- rotate_ellipse_frame(x$ellipses)
+      }
+    }
+  }
+
+  # set up geometry for diagrams. Per-strategy sublists collapse to the
+  # flat shape that `place_euler_labels` (and `apply_label_placement`'s
+  # `placement_opts`) expect: `iterations` is only forwarded when
+  # `force_directed` is the active strategy, `min_gap` only when `elbow`
+  # is.
+  strat <- labels$placement
+  fd_opts <- labels$force_directed %||% list()
+  el_opts <- labels$elbow %||% list()
+  placement_opts <- list(
+    placement = strat,
+    margin = labels$margin,
+    iterations = if (identical(strat, "force_directed")) {
+      fd_opts$iterations
+    } else {
+      NULL
+    },
+    min_gap = if (identical(strat, "elbow")) el_opts$min_gap else NULL,
+    tether = labels$tether,
+    gap = labels$gap
+  )
   if (do_groups) {
     data <- lapply(
       x,
@@ -885,9 +1462,11 @@ plot.euler <- function(
       edges = edges,
       labels = labels,
       quantities = quantities,
+      annotations = annotations,
       n = n,
-      id = id,
-      merged_sets = merged_sets
+      merged_sets = merged_sets,
+      placement_opts = placement_opts,
+      do_complement_label = isTRUE(do_complement)
     )
   } else {
     data <- setup_geometry(
@@ -896,9 +1475,11 @@ plot.euler <- function(
       edges = edges,
       labels = labels,
       quantities = quantities,
+      annotations = annotations,
       n = n,
-      id = id,
-      merged_sets = merged_sets
+      merged_sets = merged_sets,
+      placement_opts = placement_opts,
+      do_complement_label = isTRUE(do_complement)
     )
   }
 
@@ -906,17 +1487,53 @@ plot.euler <- function(
 
   if (do_groups) {
     n_groups <- length(data)
+    group_keys <- names(x)
+    panel_override <- function(by_group, key) {
+      if (is.null(by_group)) {
+        return(NULL)
+      }
+      by_group[[key]]
+    }
     euler_grob_children <- grid::gList()
     for (i in seq_len(n_groups)) {
+      key_i <- group_keys[i]
+      fills_i <- apply_panel_overrides(
+        fills,
+        panel_override(fills_by_group, key_i)
+      )
+      patterns_i <- apply_panel_overrides(
+        patterns,
+        panel_override(patterns_by_group, key_i)
+      )
+      edges_i <- apply_panel_overrides(
+        edges,
+        panel_override(edges_by_group, key_i)
+      )
+      labels_i <- apply_panel_overrides(
+        labels,
+        panel_override(labels_by_group, key_i)
+      )
+      quantities_i <- apply_panel_overrides(
+        quantities,
+        panel_override(quantities_by_group, key_i)
+      )
+      annotations_i <- apply_panel_overrides(
+        annotations,
+        panel_override(annotations_by_group, key_i)
+      )
       euler_grob_children[[i]] <- setup_grobs(
         data[[i]],
-        fills = fills,
-        patterns = patterns,
-        edges = edges,
-        labels = labels,
-        quantities = quantities,
+        fills = fills_i,
+        patterns = patterns_i,
+        edges = edges_i,
+        labels = labels_i,
+        quantities = quantities_i,
+        annotations = annotations_i,
+        complement = complement,
         number = i,
-        merged_sets = merged_sets
+        merged_sets = merged_sets,
+        n_vertices = as.integer(n),
+        placement_opts = placement_opts
       )
     }
     euler_grob <- grid::gTree(
@@ -939,8 +1556,12 @@ plot.euler <- function(
       edges = edges,
       labels = labels,
       quantities = quantities,
+      annotations = annotations,
+      complement = complement,
       number = 1,
-      merged_sets = merged_sets
+      merged_sets = merged_sets,
+      n_vertices = as.integer(n),
+      placement_opts = placement_opts
     )
     euler_grob <- grid::grobTree(euler_grob, name = "canvas.grob")
 
@@ -950,8 +1571,6 @@ plot.euler <- function(
     layout <- c(1L, 1L)
   }
 
-  xlim <- grDevices::extendrange(xlim, f = 0.01)
-  ylim <- grDevices::extendrange(ylim, f = 0.01)
   xrng <- abs(xlim[1L] - xlim[2L])
   yrng <- abs(ylim[1L] - ylim[2L])
 
@@ -961,6 +1580,21 @@ plot.euler <- function(
   }
 
   ar <- xrng / yrng
+
+  # Reserve a fixed physical margin inside the canvas so shape outlines
+  # (which straddle the geometric boundary by half a stroke width) aren't
+  # clipped by the canvas edge. The narrower data axis gets the minimum
+  # `panel_pad`; the wider axis is scaled up so the resulting inset
+  # preserves the data aspect ratio (otherwise circles would render
+  # slightly elliptical).
+  panel_pad <- grid::unit(2, "pt")
+  if (ar >= 1) {
+    pad_x <- panel_pad * ar
+    pad_y <- panel_pad
+  } else {
+    pad_x <- panel_pad
+    pad_y <- panel_pad / ar
+  }
   # adjust <- layout[1L]/layout[2]
 
   do_strip_left <- layout[1L] > 1L && do_strips
@@ -1005,7 +1639,14 @@ plot.euler <- function(
         layout = grid::grid.layout(nrow = 1, ncol = layout[2])
       )
 
-    lvls <- levels(strips$groups[[names(layout)[[2]]]])
+    top_group_name <- names(layout)[[2L]]
+    top_levels <- levels(strips$groups[[top_group_name]])
+    lvls <- resolve_strip_labels(
+      labels = strips$labels$top,
+      levels = top_levels,
+      display_levels = top_levels,
+      axis = "top"
+    )
     n_lvls <- length(lvls)
     step <- 1 / n_lvls
 
@@ -1032,7 +1673,14 @@ plot.euler <- function(
         layout = grid::grid.layout(nrow = layout[1], ncol = 1)
       )
 
-    lvls <- rev(levels(strips$groups[[names(layout)[[1]]]]))
+    left_group_name <- names(layout)[[1L]]
+    left_levels <- levels(strips$groups[[left_group_name]])
+    lvls <- resolve_strip_labels(
+      labels = strips$labels$left,
+      levels = left_levels,
+      display_levels = rev(left_levels),
+      axis = "left"
+    )
     n_lvls <- length(lvls)
     step <- 1 / n_lvls
 
@@ -1056,20 +1704,16 @@ plot.euler <- function(
       legend_grob <- legend
       legend <- list(side = "right")
     } else {
-      legend_grob <- grid::legendGrob(
+      legend_grob <- euler_legend_grob(
         labels = legend$labels,
-        do.lines = legend$do.lines,
-        ncol = legend$ncol,
-        nrow = legend$nrow,
+        gp = legend$gp,
+        symbol_size = symbol_size,
         hgap = legend$hgap,
         vgap = legend$vgap,
-        default.units = legend$default.units,
-        pch = legend$pch,
-        gp = legend$gp
+        ncol = legend$ncol,
+        nrow = legend$nrow,
+        byrow = legend$byrow
       )
-      if (do_patterns) {
-        legend_grob <- add_legend_patterns(legend_grob, legend$gp)
-      }
     }
 
     legend_grob$name <- "legend.grob"
@@ -1163,6 +1807,8 @@ plot.euler <- function(
   canvas_vp <- grid::viewport(
     layout.pos.row = diagram_row,
     layout.pos.col = diagram_col,
+    width = grid::unit(1, "npc") - pad_x - pad_x,
+    height = grid::unit(1, "npc") - pad_y - pad_y,
     name = "canvas.vp",
     layout = grid::grid.layout(
       nrow = layout[1L],
@@ -1219,142 +1865,54 @@ plot.euler <- function(
   )
 }
 
-#' Test if two polygons are intersecting or not
-#'
-#' @param a first polygon
-#' @param b second polygon
-#'
-#' @return `TRUE` if polygon `a` and `b` are intersecting, `FALSE` otherwise.
-#' @keywords internal
-#' @noRd
-test_intersection <- function(a, b) {
-  length(poly_clip(a, b, "intersection")) > 0
-}
+resolve_strip_labels <- function(labels, levels, display_levels, axis) {
+  if (is.null(labels)) {
+    return(display_levels)
+  }
 
-locate_centers <- function(p, precision = 1) {
-  n_p <- length(p)
+  label_names <- names(labels)
+  has_names <- !is.null(label_names) && any(nzchar(label_names))
 
-  if (n_p == 1) {
-    polylabelr::poi(p[[1]]$x, p[[1]]$y, precision = precision)
-  } else if (n_p > 1) {
-    intersects <- matrix(TRUE, ncol = n_p, nrow = n_p)
-
-    for (i in 1:(n_p - 1)) {
-      for (j in (i + 1):n_p) {
-        intersects[i, j] <- test_intersection(p[[i]], p[[j]])
-      }
+  if (has_names) {
+    if (any(!nzchar(label_names))) {
+      stop(sprintf(
+        "`strips$labels$%s` must be fully named when names are used.",
+        axis
+      ))
+    }
+    if (anyDuplicated(label_names)) {
+      stop(sprintf("`strips$labels$%s` must have unique names.", axis))
     }
 
-    intersects[lower.tri(intersects)] <- intersects[upper.tri(intersects)]
-
-    clusters <- unique(lapply(split(intersects, row(intersects)), which))
-
-    res <- lapply(clusters, function(cluster) {
-      n_c <- length(cluster)
-      x <- y <- double(0)
-
-      for (i in seq_len(n_c)) {
-        x <- c(x, p[[cluster[i]]]$x)
-        y <- c(y, p[[cluster[i]]]$y)
-        if (i < n_c) {
-          x <- c(x, NA)
-          y <- c(y, NA)
-        }
-      }
-      polylabelr::poi(x, y, precision = precision)
-    })
-
-    res[[which.max(unlist(lapply(res, "[[", "dist")))]]
-  } else {
-    grDevices::xy.coords(NA, NA)
-  }
-}
-
-add_legend_patterns <- function(legend_grob, gp) {
-  point_cells <- which(vapply(
-    legend_grob$children,
-    function(cell) {
-      inherits(cell$children[[1]], "points") ||
-        inherits(cell$children[[1]], "gTree")
-    },
-    logical(1)
-  ))
-
-  if (length(point_cells) == 0L) {
-    return(legend_grob)
-  }
-
-  for (i in seq_along(point_cells)) {
-    t <- seq(0, 2 * pi, length.out = 64)
-    circle <- list(
-      x = 0.5 + 0.48 * cos(t),
-      y = 0.5 + 0.48 * sin(t)
-    )
-
-    cell <- legend_grob$children[[point_cells[i]]]
-    point_vp <- cell$children[[1]]$vp
-
-    base_symbol <- grid::pathGrob(
-      x = circle$x,
-      y = circle$y,
-      default.units = "npc",
-      gp = grid::gpar(
-        fill = gp$fill[i],
-        col = gp$col[i],
-        lwd = gp$lwd[i],
-        lex = gp$lex[i],
-        alpha = gp$alpha[i]
-      )
-    )
-
-    symbol_children <- grid::gList(base_symbol)
-
-    if (gp$pattern_type[i] == "stripes") {
-      pcol <- gp$pattern_col[i]
-      if (is.na(pcol)) {
-        pcol <- gp$fill[i]
-      }
-
-      clipped <- apply_stripe_pattern(
-        fill_data = list(
-          x = circle$x,
-          y = circle$y,
-          id.lengths = length(circle$x)
-        ),
-        pattern_gp = list(
-          type = "stripes",
-          angle = gp$pattern_angle[i],
-          col = pcol,
-          lwd = gp$pattern_lwd[i],
-          alpha = gp$pattern_alpha[i]
-        ),
-        spacing_scale = 3
-      )
-
-      if (!is.null(clipped)) {
-        stripe_grob <- grid::pathGrob(
-          x = unlist(lapply(clipped, "[[", "x"), use.names = FALSE),
-          y = unlist(lapply(clipped, "[[", "y"), use.names = FALSE),
-          id.lengths = lengths(lapply(clipped, "[[", "x")),
-          default.units = "npc",
-          gp = grid::gpar(
-            fill = pcol,
-            col = "transparent",
-            alpha = gp$pattern_alpha[i]
-          )
-        )
-        symbol_children <- grid::gList(base_symbol, stripe_grob)
-      }
+    unknown_levels <- setdiff(label_names, levels)
+    if (length(unknown_levels) > 0L) {
+      stop(sprintf("`strips$labels$%s` has unknown level names.", axis))
     }
 
-    cell$children[[1]] <- grid::grobTree(
-      children = symbol_children,
-      vp = point_vp
-    )
-    legend_grob$children[[point_cells[i]]] <- cell
+    missing_levels <- setdiff(levels, label_names)
+    if (length(missing_levels) > 0L) {
+      stop(sprintf(
+        "`strips$labels$%s` must provide labels for all levels.",
+        axis
+      ))
+    }
+
+    labels <- labels[match(display_levels, label_names)]
+    names(labels) <- NULL
+    return(labels)
   }
 
-  legend_grob
+  if (length(labels) != length(display_levels)) {
+    stop(
+      sprintf(
+        "`strips$labels$%s` must have length %d.",
+        axis,
+        length(display_levels)
+      )
+    )
+  }
+
+  labels
 }
 
 #' @rdname plot.euler
@@ -1370,6 +1928,7 @@ plot.eulerr_venn <- function(
   strips = NULL,
   bg = FALSE,
   main = NULL,
+  complement = TRUE,
   n = 200L,
   adjust_labels = TRUE,
   ...
@@ -1389,6 +1948,7 @@ plot.eulerr_venn <- function(
     strips = strips,
     bg = bg,
     main = main,
+    complement = complement,
     n = n,
     ...
   )

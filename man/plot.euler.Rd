@@ -14,9 +14,12 @@
   legend = FALSE,
   labels = identical(legend, FALSE),
   quantities = FALSE,
+  annotations = NULL,
   strips = NULL,
   bg = FALSE,
   main = NULL,
+  complement = TRUE,
+  rotate = 0,
   n = 200L,
   adjust_labels = TRUE,
   ...
@@ -33,6 +36,7 @@
   strips = NULL,
   bg = FALSE,
   main = NULL,
+  complement = TRUE,
   n = 200L,
   adjust_labels = TRUE,
   ...
@@ -59,12 +63,39 @@ Named pattern vectors can be matched in
 in the diagram. Vectors are assumed to be colors for the edges.
 See \code{\link[grid:grid.lines]{grid::grid.polyline()}}.}
 
-\item{legend}{a logical scalar or list. If a list,
-the item \code{side} can be used to set the location of the legend. See
+\item{legend}{a logical scalar or list. If a list, the item \code{side} can be
+used to set the location of the legend and \code{symbol_size} can be used to scale
+the legend symbols independently of the text size. See
 \code{\link[grid:legendGrob]{grid::grid.legend()}}.}
 
 \item{labels}{a logical, vector, or list. Vectors are assumed to be
-text for the labels. See \code{\link[grid:grid.text]{grid::grid.text()}}.}
+text for the labels. See \code{\link[grid:grid.text]{grid::grid.text()}}. In addition to the
+\code{grid::gpar()} fields, the following placement controls are
+supported (delegated to the \code{eunoia} Rust crate):
+\code{labels$placement} (\code{"raycast"} (default), \code{"force_directed"}, or
+\code{"elbow"}) selects the strategy used when a label does not fit
+inside its region. \code{"raycast"} and \code{"force_directed"} produce
+straight leader lines (the former places the label along the
+centroid→POI ray, the latter relaxes labels with a polygon-aware
+force solver). \code{"elbow"} produces d3-pie style orthogonal leaders,
+stacking exterior labels in left/right columns reached by a
+three-segment polyline. \code{labels$margin} (numeric) overrides the
+per-region margin between an exterior label and the diagram
+(default is half the larger of the label's width and height);
+\code{labels$tether} (\code{"poi"} (default) or \code{"boundary"}) chooses where
+the leader line attaches on the source region; \code{labels$gap}
+controls the visible gap between the leader tip and the label box
+edge — a bare numeric is interpreted as \code{lines} (font-relative),
+a \code{\link[grid:unit]{grid::unit()}} is honored as given, and the default \code{NULL}
+tracks \code{eulerr_options()$padding} so the gap matches the spacing
+between label and quantity; \code{labels$leader} is a list (\code{col},
+\code{alpha}, \code{lwd}, \code{lty}, \code{lex}) styling the leader line drawn from
+the tether to the exterior label. Strategy-specific knobs live in
+their own sublists: \code{labels$force_directed = list(iterations = ...)}
+sets the iteration cap for the force-directed solver, and
+\code{labels$elbow = list(min_gap = ...)} sets the minimum vertical
+centre-to-centre spacing between stacked label boxes in an elbow
+column.}
 
 \item{quantities}{a logical, vector, or list. Vectors are assumed to be
 text for the quantities' labels, which by
@@ -82,10 +113,31 @@ to arguments that apply to \code{\link[grid:grid.text]{grid::grid.text()}}, an a
 also be used which should be a combination of \code{"counts"}, \code{"percent"},
 and \code{"fraction"}. The first item will be printed first and the second
 will be printed thereafter inside brackets. The default is
-\code{type = "counts"}.}
+\code{type = "counts"}.
+For finer control over the rendered text, set \code{quantities$template} to
+a string with \code{{counts}}, \code{{percent}}, and/or \code{{fraction}} placeholders,
+for example \code{"{counts}\\n{percent}"} to put the count and percentage on
+separate lines or \code{"n={counts} ({percent})"} for arbitrary layout. When
+\code{template} is set it overrides \code{type}; the set of placeholders in the
+template determines which values are computed.}
+
+\item{annotations}{free-form per-region text rendered as a third
+stacked element below the quantity (or below the label when no
+quantity is drawn). Accepts a named character vector keyed by
+subset name (e.g. \code{c(A = "n = 12", "A&B" = "n = 3")}) as a
+shorthand for \verb{list(labels = <vector>)}, or a list with \code{labels}
+plus \code{\link[grid:gpar]{grid::gpar()}} fields (\code{col}, \code{alpha}, \code{fontsize}, \code{cex},
+\code{fontfamily}, \code{lineheight}, \code{font}, \code{rot}). Regions absent from
+\code{labels} are not annotated. The composite tag bbox grows to
+include the annotation, so exterior placement and leader lines
+adapt automatically. Defaults to slightly smaller text than
+\code{labels} / \code{quantities} (\code{cex = 0.8}).}
 
 \item{strips}{a list, ignored unless the \code{'by'} argument
-was used in \code{\link[=euler]{euler()}}}
+was used in \code{\link[=euler]{euler()}}. In addition to graphical parameters, this
+argument can include \code{labels = list(top = ..., left = ...)} for custom
+strip labels. Unnamed labels are interpreted in display order. Named
+labels are matched by factor levels and then reordered to display order.}
 
 \item{bg}{a logical, character, or list controlling the background grob.
 Character values are interpreted as the background fill color.}
@@ -96,6 +148,26 @@ sensibly converted to a label via \code{\link[grDevices:as.graphicsAnnot]{grDevi
 list of length one can be provided, in which case its only element
 is used as the label. If a list of longer length is provided, an item
 named \code{'label'} must be provided (and will be used for the actual text).}
+
+\item{complement}{a logical, character, or list controlling the
+container box and complement region for diagrams fit with
+\verb{complement =} in \code{\link[=euler]{euler()}}. \code{TRUE} (default) draws the container
+with a dashed outline (\code{lty = 2}), no fill, and the complement count
+inside the complement region. \code{FALSE} suppresses the container and
+its label entirely. A character value is treated as a fill color
+shorthand. A list accepts \code{fill}, \code{alpha}, \code{col}, \code{lty}, \code{lwd},
+\code{lex} (outline + label gpar), \code{fontsize}, \code{cex}, \code{font}, \code{fontfamily},
+\code{lineheight} (label only), and \code{label} (custom text — defaults to the
+complement count). Also accepts the same placement controls as
+\code{labels} (\code{placement}, \code{margin}, \code{tether}, \code{gap}, \code{leader},
+\code{force_directed}, \code{elbow})
+for the complement count label. Has no effect if the diagram was
+fit without \verb{complement =}. Defaults can be set via
+\code{eulerr_options(complement = ...)}.}
+
+\item{rotate}{a numeric value giving the angle in degrees by which to rotate
+the entire diagram layout. Positive values rotate counter-clockwise.
+Defaults to \code{0} (no rotation).}
 
 \item{n}{number of vertices for the \code{edges} and \code{fills}}
 
@@ -139,19 +211,19 @@ arguments that are specific to each argument.
 The various \code{\link[grid:gpar]{grid::gpar()}} values that are available for each argument
 are:
 
-\tabular{lccccccc}{
-\tab fills \tab edges \tab labels \tab quantities  \tab strips \tab legend \tab main \cr
-col        \tab       \tab x     \tab x      \tab x           \tab x      \tab x      \tab x    \cr
-fill       \tab x     \tab       \tab        \tab             \tab        \tab        \tab      \cr
-alpha      \tab x     \tab x     \tab x      \tab x           \tab x      \tab x      \tab x    \cr
-lty        \tab       \tab x     \tab        \tab             \tab        \tab        \tab      \cr
-lwd        \tab       \tab x     \tab        \tab             \tab        \tab        \tab      \cr
-lex        \tab       \tab x     \tab        \tab             \tab        \tab        \tab      \cr
-fontsize   \tab       \tab       \tab x      \tab x           \tab x      \tab x      \tab x    \cr
-cex        \tab       \tab       \tab x      \tab x           \tab x      \tab x      \tab x    \cr
-fontfamily \tab       \tab       \tab x      \tab x           \tab x      \tab x      \tab x    \cr
-lineheight \tab       \tab       \tab x      \tab x           \tab x      \tab x      \tab x    \cr
-font       \tab       \tab       \tab x      \tab x           \tab x      \tab x      \tab x    \cr
+\tabular{lcccccccc}{
+\tab fills \tab edges \tab labels \tab quantities  \tab annotations \tab strips \tab legend \tab main \cr
+col        \tab       \tab x     \tab x      \tab x           \tab x           \tab x      \tab x      \tab x    \cr
+fill       \tab x     \tab       \tab        \tab             \tab             \tab        \tab        \tab      \cr
+alpha      \tab x     \tab x     \tab x      \tab x           \tab x           \tab x      \tab x      \tab x    \cr
+lty        \tab       \tab x     \tab        \tab             \tab             \tab        \tab        \tab      \cr
+lwd        \tab       \tab x     \tab        \tab             \tab             \tab        \tab        \tab      \cr
+lex        \tab       \tab x     \tab        \tab             \tab             \tab        \tab        \tab      \cr
+fontsize   \tab       \tab       \tab x      \tab x           \tab x           \tab x      \tab x      \tab x    \cr
+cex        \tab       \tab       \tab x      \tab x           \tab x           \tab x      \tab x      \tab x    \cr
+fontfamily \tab       \tab       \tab x      \tab x           \tab x           \tab x      \tab x      \tab x    \cr
+lineheight \tab       \tab       \tab x      \tab x           \tab x           \tab x      \tab x      \tab x    \cr
+font       \tab       \tab       \tab x      \tab x           \tab x           \tab x      \tab x      \tab x    \cr
 }
 
 Defaults for these values, as well as other parameters of the plots, can
@@ -159,7 +231,16 @@ be set globally using \code{\link[=eulerr_options]{eulerr_options()}}.
 
 If the diagram has been fit using the \code{data.frame} or \code{matrix} methods
 and using the \code{by} argument, the plot area will be split into panels for
-each combination of the one to two factors.
+each combination of the one to two factors. The \code{fills}, \code{patterns}, \code{edges},
+\code{labels}, \code{quantities}, and \code{annotations} arguments each accept an optional
+\code{by_group} entry: a named list of override lists keyed by panel name (the
+names of the fitted object). For multi-\code{by} fits the panel name is the
+levels joined by \code{.}, e.g. \code{"Male.German"}. Panels not listed in \code{by_group}
+use the top-level settings unchanged. Only graphical fields (and \code{rot} for
+\code{labels}, \code{quantities}, and \code{annotations}) may be overridden per panel;
+structural fields such as \code{quantities$type}, \code{quantities$format},
+\code{annotations$labels}, or named-by-subset \code{fills$fill} must be set at the
+top level.
 
 For users who are looking to plot their diagram using another package,
 all the necessary parameters can be collected if the result of this
@@ -176,6 +257,13 @@ plot(fit,
 # Add quantities to the plot
 plot(fit, quantities = TRUE)
 
+# Add free-form per-region annotations below the counts
+plot(
+  fit,
+  quantities = TRUE,
+  annotations = c(A = "mean = 35", "A&B" = "mean = 41")
+)
+
 # Add a custom legend and retain quantities
 plot(fit, quantities = TRUE, legend = list(labels = c("foo", "bar")))
 
@@ -187,6 +275,17 @@ diagram_description <- plot(fit)
 
 # Plots using 'by' argument
 plot(euler(fruits[, 1:4], by = list(sex)), legend = TRUE)
+
+# Per-panel styling with `by_group`
+plot(
+  venn(fruits[, 1:4], by = list(sex)),
+  quantities = list(
+    by_group = list(
+      male = list(col = "steelblue"),
+      female = list(col = "tomato")
+    )
+  )
+)
 }
 \seealso{
 \code{\link[=euler]{euler()}}, \code{\link[=plot.eulergram]{plot.eulergram()}}, \code{\link[grid:gpar]{grid::gpar()}},

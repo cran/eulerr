@@ -1,4 +1,4 @@
-## ----setup, include = FALSE---------------------------------------------------
+## -----------------------------------------------------------------------------
 knitr::opts_chunk$set(
   collapse = TRUE,
   comment = "#>"
@@ -6,7 +6,7 @@ knitr::opts_chunk$set(
 
 options(digits = 4)
 
-## ----input--------------------------------------------------------------------
+## -----------------------------------------------------------------------------
 library(eulerr)
 
 # Input in the form of a named numeric vector
@@ -32,17 +32,14 @@ fit2 <- euler(mat)
 ## -----------------------------------------------------------------------------
 fit2
 
-## ----residual-plot, fig.cap = "Residuals for the fit diagram."----------------
+## -----------------------------------------------------------------------------
 # Cleveland dot plot of the residuals
 dotchart(resid(fit2))
 
-## ----error-plot, fig.cap = "A plot from `error_plot()`."----------------------
-error_plot(fit2)
-
-## ----coefs--------------------------------------------------------------------
+## -----------------------------------------------------------------------------
 coef(fit2)
 
-## ----fig.cap = "A difficult combination from Wilkinson 2012."-----------------
+## -----------------------------------------------------------------------------
 wilkinson2012 <- c(
   A = 4,
   B = 6,
@@ -64,12 +61,14 @@ wilkinson2012 <- c(
 fit3 <- euler(wilkinson2012, shape = "ellipse")
 plot(fit3)
 
-## ----eulerr-plot, fig.cap = "Customizing Euler plots is a breeze in eulerr."----
+## -----------------------------------------------------------------------------
 plot(fit2)
 
-# Remove fills, vary borders, display quantities, and switch font.
+# Switch to squares for the same set combination, customizing borders,
+# labels, and quantities. The `shape` argument also accepts `"ellipse"`
+# and `"rectangle"`.
 plot(
-  fit2,
+  euler(mat, shape = "square"),
   quantities = TRUE,
   fill = "transparent",
   lty = 1:3,

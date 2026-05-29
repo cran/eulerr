@@ -4,7 +4,18 @@
 \alias{setup_geometry}
 \title{Compute geometries and label locations}
 \usage{
-setup_geometry(x, fills, edges, labels, quantities, n, id, merged_sets)
+setup_geometry(
+  x,
+  fills,
+  edges,
+  labels,
+  quantities,
+  annotations,
+  n,
+  merged_sets,
+  placement_opts = NULL,
+  do_complement_label = FALSE
+)
 }
 \arguments{
 \item{x}{an object of class 'euler'}
@@ -17,9 +28,7 @@ setup_geometry(x, fills, edges, labels, quantities, n, id, merged_sets)
 
 \item{quantities}{quantities}
 
-\item{n}{number of sets}
-
-\item{id}{identity matrix}
+\item{n}{number of vertices to use to render each ellipse}
 
 \item{merged_sets}{which sets have been merged?}
 }

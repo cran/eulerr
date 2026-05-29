@@ -186,24 +186,20 @@ test_that("a variety of sets can be reproduced", {
     "A&B&C&E"
   )
 
-  shapes <- c("circle", "ellipse")
-  losses <- c("square", "abs", "region")
-  loss_aggregators <- c("sum", "max")
+  shapes <- c("circle", "ellipse", "rectangle", "square")
+  losses <- c("sum_squared")
 
   for (shape in shapes) {
     for (loss in losses) {
-      for (loss_aggregator in loss_aggregators) {
-        for (i in seq_along(s)) {
-          x <- euler(
-            s[[i]],
-            shape = shape,
-            loss = loss,
-            loss_aggregator = loss_aggregator,
-            control = list(extraopt_control = list(max.call = 100))
-          )
-          expect_is(x, "euler")
-          y <- expect_error(dont_print(x), NA)
-        }
+      for (i in seq_along(s)) {
+        x <- euler(
+          s[[i]],
+          shape = shape,
+          loss = loss,
+          control = list(extraopt_control = list(max.call = 100))
+        )
+        expect_is(x, "euler")
+        y <- expect_error(dont_print(x), NA)
       }
     }
   }

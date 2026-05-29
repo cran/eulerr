@@ -11,15 +11,18 @@ knitr::opts_chunk$set(
 library(eulerr)
 
 ## -----------------------------------------------------------------------------
-uniform_intersections <- euler(c(
-  "A" = 10,
-  "B" = 10,
-  "C" = 10,
-  "A&B" = 4,
-  "A&C" = 4,
-  "B&C" = 4,
-  "A&B&C" = 2
-))
+uniform_intersections <- euler(
+  c(
+    "A" = 10,
+    "B" = 10,
+    "C" = 10,
+    "A&B" = 4,
+    "A&C" = 4,
+    "B&C" = 4,
+    "A&B&C" = 2
+  ),
+  shape = "square"
+)
 plot(uniform_intersections)
 
 ## -----------------------------------------------------------------------------
@@ -140,9 +143,9 @@ three_inside_fourth <- euler(c(
   "A&B" = 3,
   "A&C" = 3,
   "A&D" = 3,
-  "A&B&C" = 2,
-  "A&B&D" = 2,
-  "A&C&D" = 2,
+  "A&B&C" = 0.4,
+  "A&B&D" = 0.4,
+  "A&C&D" = 0.4,
   "A&B&C&D" = 1
 ))
 plot(three_inside_fourth)
@@ -164,23 +167,26 @@ eulerape <- euler(
 plot(eulerape)
 
 ## -----------------------------------------------------------------------------
-uniform <- euler(c(
-  "A" = 10,
-  "B" = 10,
-  "C" = 10,
-  "D" = 10,
-  "A&B" = 3,
-  "A&C" = 3,
-  "A&D" = 0,
-  "B&C" = 0,
-  "B&D" = 3,
-  "C&D" = 3,
-  "A&B&C" = 1,
-  "A&B&D" = 1,
-  "A&C&D" = 1,
-  "B&C&D" = 1,
-  "A&B&C&D" = 1
-))
+uniform <- euler(
+  c(
+    "A" = 10,
+    "B" = 10,
+    "C" = 10,
+    "D" = 10,
+    "A&B" = 3,
+    "A&C" = 3,
+    "A&D" = 0,
+    "B&C" = 0,
+    "B&D" = 3,
+    "C&D" = 3,
+    "A&B&C" = 1,
+    "A&B&D" = 1,
+    "A&C&D" = 1,
+    "B&C&D" = 1,
+    "A&B&C&D" = 1
+  ),
+  shape = "rectangle"
+)
 plot(
   uniform,
   labels = list(

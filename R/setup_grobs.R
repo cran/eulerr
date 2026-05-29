@@ -174,13 +174,29 @@ apply_stripe_pattern <- function(fill_data, pattern_gp, spacing_scale = 25) {
   }
 
   fill_paths <- split_fill_paths(fill_data)
+  subject_x <- unlist(lapply(fill_paths, "[[", "x"), use.names = FALSE)
+  subject_y <- unlist(lapply(fill_paths, "[[", "y"), use.names = FALSE)
+  subject_id_lengths <- as.integer(lengths(lapply(fill_paths, "[[", "x")))
+
   clipped <- list()
   idx <- 1L
   for (stripe in stripes) {
-    piece <- poly_clip(fill_paths, list(stripe), op = "intersection")
-    if (length(piece) > 0L) {
-      for (j in seq_along(piece)) {
-        clipped[[idx]] <- piece[[j]]
+    piece <- polygon_clip_rust(
+      subject_x = subject_x,
+      subject_y = subject_y,
+      subject_id_lengths = subject_id_lengths,
+      clip_x = stripe$x,
+      clip_y = stripe$y,
+      op = "intersection"
+    )
+    n_pieces <- length(piece$id_lengths)
+    if (n_pieces > 0L) {
+      starts <- c(1L, utils::head(cumsum(piece$id_lengths) + 1L, -1L))
+      ends <- cumsum(piece$id_lengths)
+      for (j in seq_len(n_pieces)) {
+        s <- starts[j]
+        e <- ends[j]
+        clipped[[idx]] <- list(x = piece$x[s:e], y = piece$y[s:e])
         idx <- idx + 1L
       }
     }
@@ -234,8 +250,12 @@ setup_grobs <- function(
   edges,
   labels,
   quantities,
+  annotations = NULL,
+  complement = NULL,
   number,
-  merged_sets
+  merged_sets,
+  n_vertices = 200L,
+  placement_opts = NULL
 ) {
   data_edges <- x$edges
   data_fills <- x$fills
@@ -250,13 +270,13 @@ setup_grobs <- function(
   do_patterns <- !is.null(patterns)
   do_labels <- !is.null(labels)
   do_quantities <- !is.null(quantities)
+  do_annotations <- !is.null(annotations)
 
   xlim <- x$xlim
   ylim <- x$ylim
 
-  n_e <- NROW(x$ellipses)
-  n_id <- 2L^n_e - 1L
-  id <- bit_indexr(n_e)
+  n_e <- NROW(x$shapes)
+  n_id <- length(x$fitted.values)
 
   #edges
   if (do_edges) {
@@ -351,6 +371,7 @@ setup_grobs <- function(
             data_fills[[i]]$x,
             data_fills[[i]]$y,
             id.lengths = data_fills[[i]]$id.lengths,
+            rule = "winding",
             default.units = "native",
             name = paste0("fills.grob.", i),
             gp = fills$gp[fill_idx]
@@ -372,35 +393,144 @@ setup_grobs <- function(
     }
   }
 
-  do_tags <- do_quantities || do_labels
+  container_data <- x$container
+  do_container <- !is.null(container_data) && !is.null(complement)
 
-  # labels
-  if (do_tags) {
-    tag_grobs <- gList()
+  container_fill_grob <- NULL
+  container_edge_grob <- NULL
 
-    for (i in seq_len(NROW(data_tags))) {
-      tag_grobs[[i]] <- setup_tag(
-        data_tags[i, ],
-        labels,
-        quantities,
-        number = i
+  if (do_container) {
+    cgp <- complement$gp
+
+    cp <- container_data$complement_polygon
+    if (length(cp$id_lengths) > 0L) {
+      container_fill_grob <- grid::pathGrob(
+        cp$x,
+        cp$y,
+        id.lengths = cp$id_lengths,
+        rule = "winding",
+        default.units = "native",
+        name = "complement.fill.grob",
+        gp = grid::gpar(
+          fill = cgp$fill[1L],
+          col = "transparent",
+          alpha = cgp$alpha[1L]
+        )
       )
     }
 
+    container_edge_grob <- grid::polylineGrob(
+      container_data$outline$x,
+      container_data$outline$y,
+      default.units = "native",
+      name = "container.edge.grob",
+      gp = grid::gpar(
+        col = cgp$col[1L],
+        lwd = cgp$lwd[1L],
+        lty = cgp$lty[1L],
+        lex = cgp$lex[1L],
+        alpha = cgp$alpha[1L]
+      )
+    )
+  }
+
+  # ------------------------------------------------------------------
+  # EulerTags: one gTree per panel holding every label/quantity/leader
+  # plus the optional complement count. makeContent.EulerTags re-runs
+  # the eunoia placement at draw time so resizing the device replaces
+  # labels cleanly — no clipping on shrink.
+  # ------------------------------------------------------------------
+  tag_grobs <- gList()
+  if ((do_quantities || do_labels || do_annotations) && !is.null(data_tags)) {
+    for (i in seq_len(NROW(data_tags))) {
+      tag_grobs[[length(tag_grobs) + 1L]] <- setup_tag(
+        data_tags[i, , drop = FALSE],
+        labels,
+        quantities,
+        annotations,
+        number = i
+      )
+    }
+  }
+  if (do_container) {
+    comp_tag <- setup_complement_tag(
+      container_data,
+      complement,
+      number = length(tag_grobs) + 1L
+    )
+    if (!is.null(comp_tag)) {
+      tag_grobs[[length(tag_grobs) + 1L]] <- comp_tag
+    }
+  }
+
+  do_tags <- length(tag_grobs) > 0L
+  tags_gtree <- NULL
+  if (do_tags) {
+    label_precision <- max(diff(xlim), diff(ylim)) / 100
     tags_gtree <- gTree(
       xlim = xlim,
       ylim = ylim,
+      shapes = x$shapes,
+      container = container_data,
+      n_vertices = as.integer(n_vertices),
+      placement_opts = placement_opts,
+      label_precision = label_precision,
+      padding = eulerr_options()$padding,
       children = tag_grobs,
-      name = paste("tags"),
+      name = "tags",
       cl = "EulerTags"
     )
   }
 
-  grid::grobTree(
+  panel_children <- grid::gList(
+    if (do_container && !is.null(container_fill_grob)) container_fill_grob,
     if (do_fills) fills_grob,
     if (do_patterns && identical(patterns$mode, "shape")) patterns_grob,
     if (do_edges) edges_grob,
-    if (do_tags) tags_gtree,
-    name = paste0("diagram.grob.", number)
+    if (do_container && !is.null(container_edge_grob)) container_edge_grob,
+    if (do_tags) tags_gtree
+  )
+
+  # Wrap each panel in a custom `EulerPanel` gTree so its viewport can
+  # be sized at draw time. `makeContext.EulerPanel` measures labels
+  # against the live device, runs eunoia's placement, and rewrites
+  # the panel viewport's `xscale`/`yscale` to encompass the labels.
+  # On window resize grid re-fires `makeContext`, so the bbox tracks
+  # the current device and labels can't be clipped at the panel edge.
+  #
+  # The PURE geometry bbox (no labels) is used to seed the measurement
+  # viewport — that's the smallest plausible viewport, which gives the
+  # smallest label native size and the most conservative placement.
+  # The (label-aware) `x$xlim`/`x$ylim` from setup_geometry are used as
+  # the fallback when measurement isn't possible.
+  if (NROW(x$shapes) > 0L) {
+    geom_box <- get_bounding_box(x$shapes)
+    geom_xlim <- geom_box$xlim
+    geom_ylim <- geom_box$ylim
+    if (!is.null(x$container)) {
+      cx <- x$container$h
+      cy <- x$container$k
+      chw <- x$container$width / 2
+      chh <- x$container$height / 2
+      geom_xlim <- range(c(geom_xlim, cx - chw, cx + chw))
+      geom_ylim <- range(c(geom_ylim, cy - chh, cy + chh))
+    }
+  } else {
+    geom_xlim <- xlim
+    geom_ylim <- ylim
+  }
+  label_precision_base <- max(diff(geom_xlim), diff(geom_ylim)) / 100
+  grid::gTree(
+    children = panel_children,
+    shapes = x$shapes,
+    container = if (do_container) x$container else NULL,
+    n_vertices = as.integer(n_vertices),
+    placement_opts = placement_opts,
+    geom_xlim = geom_xlim,
+    geom_ylim = geom_ylim,
+    label_precision = label_precision_base,
+    padding = eulerr_options()$padding,
+    name = paste0("diagram.grob.", number),
+    cl = "EulerPanel"
   )
 }

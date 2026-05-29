@@ -31,18 +31,31 @@ some margin sizes in the resulting plot}#'
 \item{labels}{a list of items \code{rot},
 \code{col}, \code{alpha}, \code{fontsize}, \code{cex}, \code{fontfamily}, \code{fontface},
 \code{lineheight}, and \code{font}}
-\item{quantities}{a list of items \code{type}, \code{format}, \code{total}, \code{rot},
+\item{quantities}{a list of items \code{type}, \code{template}, \code{format}, \code{total}, \code{rot},
 \code{col}, \code{alpha}, \code{fontsize}, \code{cex}, \code{fontfamily},
 \code{lineheight}, and \code{font}}
+\item{annotations}{a list of items \code{rot}, \code{col}, \code{alpha}, \code{fontsize},
+\code{cex}, \code{fontfamily}, \code{lineheight}, \code{font}, and \code{labels} (a named
+character vector keyed by subset name). Used to add a third stacked
+text element per region below the quantity.}
 \item{strips}{\code{col}, \code{alpha}, \code{fontsize}, \code{cex}, \code{fontfamily},
 \code{lineheight}, and \code{font}}
 \item{legend}{arguments to \code{\link[grid:legendGrob]{grid::legendGrob()}} as well as \code{col}, \code{alpha},
-\code{fontsize}, \code{cex}, \code{fontfamily}, \code{lineheight}, and \code{font}}
+\code{fontsize}, \code{cex}, \code{symbol_size} (symbol size multiplier, independent of text
+size; defaults to \code{cex} if \code{NULL}), \code{fontfamily}, \code{lineheight}, and \code{font}}
 \item{main}{arguments to \code{\link[grid:grid.text]{grid::textGrob()}}}
+\item{complement}{a list of styling defaults for the container box
+and its complement label drawn when \code{\link[=euler]{euler()}} is called with
+\verb{complement =}. Items: \code{fill}, \code{alpha}, \code{col}, \code{lty}, \code{lwd}, \code{lex},
+\code{fontsize}, \code{cex}, \code{font}, \code{fontfamily}, \code{lineheight}. The default
+\code{lty = 2} draws the container with a dashed outline.}
 \item{padding}{a \code{\link[grid:unit]{grid::unit()}} giving the padding between various
 elements in plots from \code{\link[=plot.euler]{plot.euler()}}, which you can change
 if you, for instance, want to increase spacing between labels,
 quantities, and percentages.}
+\item{composition}{a list controlling how \code{eulergram} objects are
+arranged when composed via \code{|} or \code{/}. Contains a single \code{spacing}
+item (a \code{\link[grid:unit]{grid::unit()}}) that sets the gap between adjacent plots.}
 }
 }
 \examples{
