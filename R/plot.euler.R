@@ -138,7 +138,7 @@
 #'   `labels` are not annotated. The composite tag bbox grows to
 #'   include the annotation, so exterior placement and leader lines
 #'   adapt automatically. Defaults to slightly smaller text than
-#'   `labels` / `quantities` (`cex = 0.8`).
+#'   `labels`/`quantities` (`cex = 0.8`).
 #' @param strips a list, ignored unless the `'by'` argument
 #'   was used in [euler()]. In addition to graphical parameters, this
 #'   argument can include `labels = list(top = ..., left = ...)` for custom
@@ -332,7 +332,7 @@ plot.euler <- function(
       stop("`", name, "$by_group` must be a non-empty named list.")
     }
     keys <- names(by_group)
-    if (is.null(keys) || any(!nzchar(keys))) {
+    if (is.null(keys) || !all(nzchar(keys))) {
       stop("`", name, "$by_group` must be a fully named list.")
     }
     valid_keys <- names(x)
@@ -647,7 +647,7 @@ plot.euler <- function(
       NULL
     }
   )
-  do_legacy_patterns <- any(!vapply(legacy_patterns, is.null, logical(1)))
+  do_legacy_patterns <- !all(vapply(legacy_patterns, is.null, logical(1)))
   do_patterns <- do_patterns || do_legacy_patterns
 
   # setup patterns
@@ -916,7 +916,7 @@ plot.euler <- function(
           )
         }
         strip_label_names <- names(strip_labels)
-        if (is.null(strip_label_names) || any(!nzchar(strip_label_names))) {
+        if (is.null(strip_label_names) || !all(nzchar(strip_label_names))) {
           stop(
             "`strips$labels` must be a named list with optional `top` and `left` entries."
           )
@@ -1136,7 +1136,7 @@ plot.euler <- function(
         stop("`annotations$labels` must be a character vector.")
       }
       lbl_names <- names(annotations$labels)
-      if (is.null(lbl_names) || any(!nzchar(lbl_names))) {
+      if (is.null(lbl_names) || !all(nzchar(lbl_names))) {
         stop(
           "`annotations$labels` must be a fully named character vector keyed by subset (e.g. `c(A = \"...\", \"A&B\" = \"...\")`)."
         )
@@ -1391,18 +1391,18 @@ plot.euler <- function(
     theta <- rotate * pi / 180
     ct <- cos(theta)
     st <- sin(theta)
-    # Rotation only updates `phi` for ellipse-like shapes — rectangles and
+    # Rotation updates `phi` for shapes that carry an orientation angle
+    # (ellipse-like shapes and rotated rectangles). Plain rectangles and
     # squares are axis-aligned in eunoia, so there's no in-plane rotation
-    # angle to advance. The geometry itself is still rotated via the (h, k)
-    # update, but the result rotates the centers without re-orienting the
-    # boxes; this matches eunoia's axis-aligned model.
+    # angle to advance — their geometry is still rotated via the (h, k)
+    # update, which rotates the centers without re-orienting the boxes.
     rotate_shapes <- function(dd) {
       h_new <- dd$h * ct - dd$k * st
       dd$k <- dd$h * st + dd$k * ct
       dd$h <- h_new
       if (NROW(dd) > 0L) {
         type <- dd$type[1L]
-        if (type %in% c("circle", "ellipse")) {
+        if (type %in% c("circle", "ellipse", "rotated_rectangle")) {
           dd$phi <- dd$phi + theta
         }
       }
@@ -1581,13 +1581,18 @@ plot.euler <- function(
 
   ar <- xrng / yrng
 
-  # Reserve a fixed physical margin inside the canvas so shape outlines
-  # (which straddle the geometric boundary by half a stroke width) aren't
-  # clipped by the canvas edge. The narrower data axis gets the minimum
-  # `panel_pad`; the wider axis is scaled up so the resulting inset
-  # preserves the data aspect ratio (otherwise circles would render
-  # slightly elliptical).
-  panel_pad <- grid::unit(2, "pt")
+  # Reserve a physical margin inside the canvas so the diagram has
+  # visible breathing room and shape outlines (which straddle the
+  # geometric boundary by half a stroke width) aren't clipped by the
+  # canvas edge. The default margin (`eulerr_options()$margin`) is fixed
+  # in points rather than relative to the canvas because the things it
+  # guards against -- stroke width, anti-aliasing, and label text -- are
+  # themselves physical sizes that don't shrink with the plot; a relative
+  # margin would under-pad small plots, which are the most at risk of
+  # clipping. The narrower data axis gets the minimum `panel_pad`; the
+  # wider axis is scaled up so the resulting inset preserves the data
+  # aspect ratio (otherwise circles would render slightly elliptical).
+  panel_pad <- opar$margin %||% grid::unit(6, "pt")
   if (ar >= 1) {
     pad_x <- panel_pad * ar
     pad_y <- panel_pad
@@ -1874,7 +1879,7 @@ resolve_strip_labels <- function(labels, levels, display_levels, axis) {
   has_names <- !is.null(label_names) && any(nzchar(label_names))
 
   if (has_names) {
-    if (any(!nzchar(label_names))) {
+    if (!all(nzchar(label_names))) {
       stop(sprintf(
         "`strips$labels$%s` must be fully named when names are used.",
         axis

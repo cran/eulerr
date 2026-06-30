@@ -51,6 +51,30 @@ test_that("all venn diagram sizes work", {
   }
 })
 
+test_that("rotated-rectangle venn works for up to four sets", {
+  for (n in 1:4) {
+    v <- venn(n, names = letters[1:n], shape = "rotated_rectangle")
+    expect_is(v, "eulerr_venn")
+    s <- v$shapes
+    expect_identical(unique(s$type), "rotated_rectangle")
+    expect_equal(NROW(s), n)
+    expect_true(all(is.finite(s$h)))
+    expect_true(all(is.finite(s$width)))
+    expect_true(all(is.finite(s$phi)))
+    expect_null(v$ellipses)
+    # a true Venn diagram has all 2^n - 1 regions
+    expect_equal(length(v$original.values), 2^n - 1)
+    expect_silent(plot(v))
+  }
+})
+
+test_that("rotated-rectangle venn rejects five sets", {
+  expect_error(
+    venn(5, names = letters[1:5], shape = "rotated_rectangle"),
+    "four sets"
+  )
+})
+
 test_that("normal use of venn() returns no errors", {
   expect_silent(venn(organisms))
   expect_silent(venn(c(A = 1, B = 2)))
@@ -87,6 +111,28 @@ test_that("zero-sized input is allowed", {
   s <- c(A = 0, B = 0)
   expect_silent(f <- euler(s))
   expect_equivalent(fitted(f), rep(0, length(fitted(f))))
+})
+
+test_that("`transform` transforms the disjoint regions before fitting", {
+  x <- c(A = 1e6, B = 1e2, "A&B" = 50)
+
+  # identity (default) leaves the original values untouched
+  f0 <- euler(x)
+  expect_equivalent(f0$original.values, c(1e6, 1e2, 50))
+
+  # a monotone transform is applied to the exclusive regions
+  f1 <- euler(x, transform = log1p)
+  expect_equivalent(f1$original.values, log1p(c(1e6, 1e2, 50)))
+
+  # union input is decomposed to disjoint before the transform, so it agrees
+  # with passing the equivalent disjoint areas directly
+  xu <- c(A = 1e6 + 50, B = 1e2 + 50, "A&B" = 50)
+  fu <- euler(xu, input = "union", transform = log1p)
+  expect_equivalent(fu$original.values, log1p(c(1e6, 1e2, 50)))
+
+  # a transform that produces negative areas is rejected
+  expect_error(euler(x, transform = function(z) z - 1e7))
+  expect_error(euler(x, transform = "log"), "must be a function")
 })
 
 test_that("factors in euler.data.frame() are handled appropriately", {

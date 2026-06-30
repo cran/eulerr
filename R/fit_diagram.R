@@ -1,8 +1,33 @@
+# Convert a named vector of *union* (inclusive) combination areas into the
+# areas of the disjoint (exclusive) regions they imply. Mirrors the
+# decomposition used in the venn branch, but over whatever combinations are
+# named (unnamed combinations are treated as 0 elsewhere).
+union_to_disjoint <- function(combinations) {
+  labels <- names(combinations)
+  set_lists <- strsplit(labels, "&", fixed = TRUE)
+  cards <- lengths(set_lists)
+  disjoint <- numeric(length(labels))
+
+  for (i in order(cards, decreasing = TRUE)) {
+    this_sets <- set_lists[[i]]
+    is_strict_super <- cards > cards[i] &
+      vapply(set_lists, function(s) all(this_sets %in% s), logical(1))
+    disjoint[i] <- combinations[i] - sum(disjoint[is_strict_super])
+  }
+
+  if (any(disjoint < 0)) {
+    stop("Check your set configuration. Some disjoint areas are negative.")
+  }
+
+  stats::setNames(disjoint, labels)
+}
+
 fit_diagram <- function(
   combinations,
   type = c("euler", "venn"),
   input = c("disjoint", "union"),
-  shape = c("circle", "ellipse", "rectangle", "square"),
+  transform = identity,
+  shape = c("circle", "ellipse", "rectangle", "square", "rotated_rectangle"),
   loss = c(
     "sum_squared",
     "sum_absolute",
@@ -12,7 +37,14 @@ fit_diagram <- function(
     "max_squared",
     "root_mean_squared",
     "stress",
-    "diag_error"
+    "diag_error",
+    "log_sum_absolute",
+    "smooth_sum_absolute",
+    "smooth_sum_absolute_region_error",
+    "smooth_max_absolute",
+    "smooth_max_squared",
+    "smooth_diag_error",
+    "smooth_log_sum_absolute"
   ),
   loss_aggregator = NULL,
   complement = NULL,
@@ -23,6 +55,10 @@ fit_diagram <- function(
   shape <- match.arg(shape)
   type <- match.arg(type)
   loss <- resolve_loss(loss, loss_aggregator)
+
+  if (!is.function(transform)) {
+    stop("`transform` must be a function")
+  }
 
   if (!is.numeric(combinations)) {
     stop("`combinations` must be numeric")
@@ -96,6 +132,34 @@ fit_diagram <- function(
     orig <- stats::setNames(areas_disjoint, combo_labels)
     fit <- stats::setNames(rep.int(1, N), combo_labels)
 
+    if (shape == "rotated_rectangle") {
+      # Rotated-rectangle Venn geometry comes from eunoia's canonical layout
+      # (rotation is what lets four rectangles open all 15 regions). It only
+      # supports up to four sets, unlike the ellipse lookup.
+      if (n > 4) {
+        stop(
+          "rotated-rectangle Venn diagrams support at most four sets; ",
+          "use the default ellipse shape for five sets"
+        )
+      }
+      layout <- venn_layout(setnames, "rotated_rectangle")
+      shapes <- new_shape_frame("rotated_rectangle", n, setnames)
+      shapes$h <- layout$h
+      shapes$k <- layout$k
+      shapes$width <- layout$width
+      shapes$height <- layout$height
+      shapes$phi <- layout$phi
+
+      return(structure(
+        list(
+          shapes = shapes,
+          original.values = orig,
+          fitted.values = fit
+        ),
+        class = c("eulerr_venn", "venn", "euler", "list")
+      ))
+    }
+
     fpar <- venn_spec[[n]]
     rownames(fpar) <- setnames
     shapes <- ellipse_frame_to_shapes(fpar, "ellipse")
@@ -112,13 +176,25 @@ fit_diagram <- function(
   }
 
   # Euler fit: delegate to Rust
+
+  # `modifyList()` drops NULL entries, so an explicit `n_threads = NULL` (the
+  # "use all cores" sentinel) would otherwise silently revert to the default.
+  # Detect it before merging.
+  n_threads_auto <- "n_threads" %in%
+    names(control) &&
+    is.null(control$n_threads)
+
   control <- utils::modifyList(
     list(
       extraopt = (n == 3) && (shape == "ellipse"),
       extraopt_threshold = 0.001,
       extraopt_control = list(),
       tolerance = 1e-3,
-      max_sets = NULL
+      max_sets = NULL,
+      n_threads = default_n_threads(),
+      optimizer = "auto",
+      n_restarts = NULL,
+      loss_eps = 0.01
     ),
     control
   )
@@ -160,6 +236,60 @@ fit_diagram <- function(
     }
   }
 
+  # `n_threads` controls how many threads the restart loop is fanned across.
+  # NULL (signalled by `n_threads_auto`) means "use all available cores"; the
+  # default of 1 keeps the fit single-threaded. Results are identical
+  # regardless of the thread count.
+  if (n_threads_auto) {
+    n_threads <- NULL
+  } else {
+    n_threads <- control$n_threads
+    if (
+      !is.numeric(n_threads) ||
+        length(n_threads) != 1L ||
+        !is.finite(n_threads) ||
+        n_threads < 1 ||
+        n_threads != as.integer(n_threads)
+    ) {
+      stop(
+        "`control$n_threads` must be a positive integer scalar, or NULL for automatic"
+      )
+    }
+    n_threads <- as.integer(n_threads)
+  }
+
+  optimizer_choices <- c(
+    "auto",
+    "levenberg_marquardt",
+    "lbfgs",
+    "nelder_mead",
+    "mads",
+    "cma_es",
+    "cma_es_lm",
+    "trf",
+    "cma_es_trf"
+  )
+  optimizer <- match.arg(control$optimizer, optimizer_choices)
+
+  loss_eps <- as.numeric(control$loss_eps)
+  if (length(loss_eps) != 1L || !is.finite(loss_eps) || loss_eps <= 0) {
+    stop("`control$loss_eps` must be a single positive number")
+  }
+
+  n_restarts <- control$n_restarts
+  if (!is.null(n_restarts)) {
+    if (
+      !is.numeric(n_restarts) ||
+        length(n_restarts) != 1L ||
+        !is.finite(n_restarts) ||
+        n_restarts < 1 ||
+        n_restarts != as.integer(n_restarts)
+    ) {
+      stop("`control$n_restarts` must be a positive integer scalar, or NULL")
+    }
+    n_restarts <- as.integer(n_restarts)
+  }
+
   effective_cap <- if (is.null(max_sets)) max_sets_default() else max_sets
   if (n > effective_cap) {
     stop(sprintf(
@@ -173,17 +303,61 @@ fit_diagram <- function(
   # Derive integer seed from R's RNG so set.seed() works
   seed <- sample.int(.Machine$integer.max, 1L)
 
+  # A `transform` applies to the *disjoint* (exclusive) regions, since those are
+  # the additive atoms the fitter targets. When the input is given as unions we
+  # must decompose to disjoint areas first so the transform lands on the right
+  # quantities, then hand the result to Rust as disjoint input.
+  combo_names <- names(combinations)
+  combo_values <- as.double(combinations)
+  input_used <- input
+
+  if (!identical(transform, identity)) {
+    if (input == "union") {
+      disjoint <- union_to_disjoint(combinations)
+      combo_names <- names(disjoint)
+      combo_values <- as.double(disjoint)
+      input_used <- "disjoint"
+    }
+
+    combo_values <- as.double(transform(combo_values))
+
+    if (
+      length(combo_values) != length(combo_names) ||
+        any(!is.finite(combo_values)) ||
+        any(combo_values < 0)
+    ) {
+      stop(
+        "`transform` must return a non-negative, finite value for every region"
+      )
+    }
+
+    if (!is.null(complement)) {
+      complement <- as.double(transform(complement))
+      if (
+        length(complement) != 1L || !is.finite(complement) || complement < 0
+      ) {
+        stop(
+          "`transform` must return a single non-negative value for `complement`"
+        )
+      }
+    }
+  }
+
   result <- fit_euler_diagram(
-    combo_names = names(combinations),
-    combo_values = as.double(combinations),
-    input = input,
+    combo_names = combo_names,
+    combo_values = combo_values,
+    input = input_used,
     shape = shape,
     loss = loss,
+    loss_eps = loss_eps,
+    optimizer = optimizer,
+    n_restarts = if (is.null(n_restarts)) NULL else as.numeric(n_restarts),
     extraopt_threshold = extraopt_threshold,
     tolerance = tolerance,
     max_sets = if (is.null(max_sets)) NULL else as.numeric(max_sets),
     complement = complement,
-    seed = seed
+    seed = seed,
+    n_threads = if (is.null(n_threads)) NULL else as.numeric(n_threads)
   )
 
   # Empty sets stay NA so downstream code (setup_geometry, plotting) detects
@@ -337,7 +511,14 @@ resolve_loss <- function(loss, loss_aggregator) {
     "max_squared",
     "root_mean_squared",
     "stress",
-    "diag_error"
+    "diag_error",
+    "log_sum_absolute",
+    "smooth_sum_absolute",
+    "smooth_sum_absolute_region_error",
+    "smooth_max_absolute",
+    "smooth_max_squared",
+    "smooth_diag_error",
+    "smooth_log_sum_absolute"
   )
   legacy_loss <- c("square", "abs", "region")
 

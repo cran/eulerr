@@ -14,10 +14,13 @@ euler(combinations, ...)
 \method{euler}{default}(
   combinations,
   input = c("disjoint", "union"),
-  shape = c("circle", "ellipse", "rectangle", "square"),
+  transform = identity,
+  shape = c("circle", "ellipse", "rectangle", "square", "rotated_rectangle"),
   loss = c("sum_squared", "sum_absolute", "sum_absolute_region_error",
     "sum_squared_region_error", "max_absolute", "max_squared", "root_mean_squared",
-    "stress", "diag_error"),
+    "stress", "diag_error", "log_sum_absolute", "smooth_sum_absolute",
+    "smooth_sum_absolute_region_error", "smooth_max_absolute", "smooth_max_squared",
+    "smooth_diag_error", "smooth_log_sum_absolute"),
   loss_aggregator = NULL,
   complement = NULL,
   control = list(),
@@ -48,24 +51,44 @@ data.frame (see \strong{methods (by class)})}
 \item{input}{type of input: disjoint identities
 (\code{'disjoint'}) or unions (\code{'union'}).}
 
-\item{shape}{geometric shape used in the diagram}
+\item{transform}{a function applied to the areas of the \emph{disjoint}
+(exclusive) regions before fitting. The default, \code{\link[base:identity]{base::identity()}}, leaves
+the areas untouched. A monotone transform such as \code{\link[base:log1p]{base::log1p()}} can keep
+small regions legible when set sizes span several orders of magnitude. The
+transform is applied to the exclusive regions because those are the
+additive atoms the diagram fits to; as a consequence the area of a whole
+set or union no longer equals \code{transform()} of its size, only the
+individual visible regions carry the transformed scale. The function must
+return a non-negative, finite value for each region (and for \code{complement},
+when given). Has no effect on \code{\link[=venn]{venn()}} diagrams, whose geometry is fixed.}
+
+\item{shape}{geometric shape used in the diagram: one of \code{"circle"},
+\code{"ellipse"}, \code{"rectangle"}, \code{"square"}, or \code{"rotated_rectangle"}. The
+rotated rectangle is fit with a derivative-free optimizer and is also the
+only shape able to draw a true four-set Venn diagram (see \code{\link[=venn]{venn()}}).}
 
 \item{loss}{type of loss to minimize over. The default,
 \code{"sum_squared"}, minimizes the sum of squared errors. The available
 options mirror the loss functions exposed by the \code{eunoia} Rust crate
 that powers the optimizer:
 \itemize{
-\item \code{"sum_squared"} --- normalized sum of squared errors (default).
-\item \code{"sum_absolute"} --- normalized sum of absolute errors.
-\item \code{"sum_absolute_region_error"} --- normalized sum of absolute
+\item \code{"sum_squared"}: normalized sum of squared errors (default).
+\item \code{"sum_absolute"}: normalized sum of absolute errors.
+\item \code{"sum_absolute_region_error"}: normalized sum of absolute
 region errors.
-\item \code{"sum_squared_region_error"} --- normalized sum of squared region
+\item \code{"sum_squared_region_error"}: normalized sum of squared region
 errors.
-\item \code{"max_absolute"} --- normalized maximum absolute error.
-\item \code{"max_squared"} --- normalized maximum squared error.
-\item \code{"root_mean_squared"} --- normalized root-mean-squared error.
-\item \code{"stress"} --- venneuler-style stress.
-\item \code{"diag_error"} --- eulerAPE-style \code{diagError}.
+\item \code{"max_absolute"}: normalized maximum absolute error.
+\item \code{"max_squared"}: normalized maximum squared error.
+\item \code{"root_mean_squared"}: normalized root-mean-squared error.
+\item \code{"stress"}: venneuler-style stress.
+\item \code{"diag_error"}: eulerAPE-style \code{diagError}.
+\item \code{"log_sum_absolute"}: sum of absolute errors on \code{log1p}-transformed
+areas, which stops large regions from dominating the fit.
+\item \code{"smooth_sum_absolute"}, \code{"smooth_sum_absolute_region_error"},
+\code{"smooth_max_absolute"}, \code{"smooth_max_squared"}, \code{"smooth_diag_error"},
+\code{"smooth_log_sum_absolute"} --- gradient-friendly (Huber) surrogates of
+the corresponding non-smooth losses, controlled by \code{control$loss_eps}.
 }}
 
 \item{loss_aggregator}{deprecated; use \code{loss} directly instead. Pre-1.0
@@ -74,7 +97,7 @@ code that combined \code{loss} (\code{"square"}/\code{"abs"}/\code{"region"}) wi
 the combination is mapped to the equivalent new \code{loss} value.}
 
 \item{complement}{an optional single non-negative number giving the area
-of the \emph{complement} — that is, the universe outside every named set.
+of the \emph{complement}, that is, the universe outside every named set.
 When supplied, the fitter jointly optimizes a containing rectangle
 together with the diagram shapes so that the area of the rectangle
 minus the union of (clipped) shapes matches \code{complement}. This is the
@@ -89,7 +112,7 @@ in when the primary optimizer's \code{diagError} exceeds \code{extraopt_threshol
 The default is \code{TRUE} for three-set ellipse fits and \code{FALSE} otherwise.
 \item \code{extraopt_threshold}: threshold, in terms of \code{diagError}, for when
 the CMA-ES fallback kicks in. A value of 0 means it will kick in for
-\emph{any} error; a value of 1 means it will never kick in. Default \code{0.001}.
+an* error; a value of 1 means it will never kick in. Default \code{0.001}.
 \item \code{tolerance}: convergence tolerance passed to the underlying solver.
 Tighter values give more accurate fits at higher cost. Default \code{1e-8}.
 \item \code{max_sets}: maximum number of sets the underlying engine will accept.
@@ -97,6 +120,28 @@ Defaults to \code{NULL}, which uses the engine's built-in default of 32.
 Region masks are stored in a bitset, so values may be raised up to 63
 (the absolute hard cap). Going higher is rarely useful in practice
 since fully-overlapping diagrams have \code{2^n - 1} regions.
+\item \code{n_threads}: number of threads used to fan out the optimizer's restart
+loop. A positive integer pins a private thread pool of that size, while
+\code{NULL} uses all available cores. This is purely a wall-time knob: the
+fitted diagram is identical regardless of the thread count. The default
+uses half of the available logical cores (but a single thread under
+\verb{R CMD check}, to respect CRAN's two-core policy). It can be overridden
+globally with the \code{eulerr.n_threads} option or the \code{EULERR_NUM_THREADS}
+environment variable, and otherwise honors R's conventional \code{mc.cores}
+option (or \code{MC_CORES} environment variable).
+\item \code{optimizer}: the final-layout optimizer. The default, \code{"auto"}, lets the
+engine pick a sensible optimizer for the chosen shape and loss. To force a
+particular one, use any of \code{"levenberg_marquardt"}, \code{"lbfgs"},
+\code{"nelder_mead"}, \code{"mads"} (mesh-adaptive direct search, derivative-free
+and well suited to non-smooth losses), \code{"cma_es"}, \code{"cma_es_lm"}, \code{"trf"},
+or \code{"cma_es_trf"}.
+\item \code{n_restarts}: number of full-pipeline restarts; the lowest-loss result
+is kept. Higher values improve the chance of finding the global optimum at
+proportionally higher cost. \code{NULL} (the default) lets the engine choose
+(10, automatically reduced for small smooth-loss fits).
+\item \code{loss_eps}: smoothing parameter for the \code{"smooth_*"} losses; pick roughly
+1\% of the typical residual magnitude. Smaller values track the non-smooth
+loss more closely but give noisier gradients. Default \code{0.01}.
 }}
 
 \item{weights}{a numeric vector of weights of the same length as
@@ -115,10 +160,12 @@ constructing dummy codes}
 A list object of class \code{'euler'} with the following parameters.
 \item{shapes}{a data frame of fitted shape parameters. One row per set
 with a \code{type} column (one of \code{"circle"}, \code{"ellipse"}, \code{"rectangle"},
-\code{"square"}), the center coordinates \code{h} and \code{k}, and the
-shape-specific columns: \code{a}, \code{b}, \code{phi} for ellipses/circles; \code{width}
-and \code{height} for rectangles; \code{side} (plus mirrored \code{width}/\code{height})
-for squares. Columns that don't apply to the chosen shape are \code{NA}.}
+\code{"square"}, \code{"rotated_rectangle"}), the center coordinates \code{h} and \code{k},
+and the shape-specific columns: \code{a}, \code{b}, \code{phi} for ellipses/circles;
+\code{width} and \code{height} for rectangles; \code{side} (plus mirrored
+\code{width}/\code{height}) for squares; \code{width}, \code{height}, and \code{phi} (rotation,
+in radians) for rotated rectangles. Columns that don't apply to the
+chosen shape are \code{NA}.}
 \item{ellipses}{for \code{shape = "circle"} and \code{shape = "ellipse"} fits,
 the legacy 5-column data frame of \code{h}, \code{k}, \code{a}, \code{b}, \code{phi}. This
 slot is deprecated in favour of \code{shapes} and is not populated for
@@ -189,7 +236,7 @@ Missing combinations are treated as being 0.
 factors.
 
 \item \code{euler(matrix)}: a matrix that can be converted to a data.frame of logicals
-(as in the description above) via \code{\link[base:as.data.frame]{base::as.data.frame.matrix()}}.
+(as in the description above) via \code{\link[base:as.data.frame.matrix]{base::as.data.frame.matrix()}}.
 
 \item \code{euler(table)}: A table with \code{max(dim(x)) < 3}.
 

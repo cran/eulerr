@@ -1,0 +1,766 @@
+<!DOCTYPE html>
+
+<html>
+
+<head>
+
+<meta charset="utf-8" />
+<meta name="generator" content="pandoc" />
+<meta http-equiv="X-UA-Compatible" content="IE=EDGE" />
+
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+
+<meta name="author" content="Johan Larsson" />
+
+<meta name="date" content="2026-06-30" />
+
+<title>Comparison with other packages</title>
+
+<script>// Pandoc 2.9 adds attributes on both header and div. We remove the former (to
+// be compatible with the behavior of Pandoc < 2.8).
+document.addEventListener('DOMContentLoaded', function(e) {
+  var hs = document.querySelectorAll("div.section[class*='level'] > :first-child");
+  var i, h, a;
+  for (i = 0; i < hs.length; i++) {
+    h = hs[i];
+    if (!/^h[1-6]$/i.test(h.tagName)) continue;  // it should be a header h1-h6
+    a = h.attributes;
+    while (a.length > 0) h.removeAttribute(a[0].name);
+  }
+});
+</script>
+
+<style type="text/css">
+code{white-space: pre-wrap;}
+span.smallcaps{font-variant: small-caps;}
+span.underline{text-decoration: underline;}
+div.column{display: inline-block; vertical-align: top; width: 50%;}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+</style>
+
+
+
+
+
+
+<style type="text/css">
+
+div.csl-bib-body { }
+div.csl-entry {
+clear: both;
+}
+.hanging div.csl-entry {
+margin-left:2em;
+text-indent:-2em;
+}
+div.csl-left-margin {
+min-width:2em;
+float:left;
+}
+div.csl-right-inline {
+margin-left:2em;
+padding-left:1em;
+}
+div.csl-indent {
+margin-left: 2em;
+}
+</style>
+
+<style type="text/css">body {
+background-color: #fff;
+margin: 1em auto;
+max-width: 700px;
+overflow: visible;
+padding-left: 2em;
+padding-right: 2em;
+font-family: "Open Sans", "Helvetica Neue", Helvetica, Arial, sans-serif;
+font-size: 14px;
+line-height: 1.35;
+}
+#TOC {
+clear: both;
+margin: 0 0 10px 10px;
+padding: 4px;
+width: 400px;
+border: 1px solid #CCCCCC;
+border-radius: 5px;
+background-color: #f6f6f6;
+font-size: 13px;
+line-height: 1.3;
+}
+#TOC .toctitle {
+font-weight: bold;
+font-size: 15px;
+margin-left: 5px;
+}
+#TOC ul {
+padding-left: 40px;
+margin-left: -1.5em;
+margin-top: 5px;
+margin-bottom: 5px;
+}
+#TOC ul ul {
+margin-left: -2em;
+}
+#TOC li {
+line-height: 16px;
+}
+table {
+margin: 1em auto;
+border-width: 1px;
+border-color: #DDDDDD;
+border-style: outset;
+border-collapse: collapse;
+}
+table th {
+border-width: 2px;
+padding: 5px;
+border-style: inset;
+}
+table td {
+border-width: 1px;
+border-style: inset;
+line-height: 18px;
+padding: 5px 5px;
+}
+table, table th, table td {
+border-left-style: none;
+border-right-style: none;
+}
+table thead, table tr.even {
+background-color: #f7f7f7;
+}
+p {
+margin: 0.5em 0;
+}
+blockquote {
+background-color: #f6f6f6;
+padding: 0.25em 0.75em;
+}
+hr {
+border-style: solid;
+border: none;
+border-top: 1px solid #777;
+margin: 28px 0;
+}
+dl {
+margin-left: 0;
+}
+dl dd {
+margin-bottom: 13px;
+margin-left: 13px;
+}
+dl dt {
+font-weight: bold;
+}
+ul {
+margin-top: 0;
+}
+ul li {
+list-style: circle outside;
+}
+ul ul {
+margin-bottom: 0;
+}
+pre, code {
+background-color: #f7f7f7;
+border-radius: 3px;
+color: #333;
+white-space: pre-wrap; 
+}
+pre {
+border-radius: 3px;
+margin: 5px 0px 10px 0px;
+padding: 10px;
+}
+pre:not([class]) {
+background-color: #f7f7f7;
+}
+code {
+font-family: Consolas, Monaco, 'Courier New', monospace;
+font-size: 85%;
+}
+p > code, li > code {
+padding: 2px 0px;
+}
+div.figure {
+text-align: center;
+}
+img {
+background-color: #FFFFFF;
+padding: 2px;
+border: 1px solid #DDDDDD;
+border-radius: 3px;
+border: 1px solid #CCCCCC;
+margin: 0 5px;
+}
+h1 {
+margin-top: 0;
+font-size: 35px;
+line-height: 40px;
+}
+h2 {
+border-bottom: 4px solid #f7f7f7;
+padding-top: 10px;
+padding-bottom: 2px;
+font-size: 145%;
+}
+h3 {
+border-bottom: 2px solid #f7f7f7;
+padding-top: 10px;
+font-size: 120%;
+}
+h4 {
+border-bottom: 1px solid #f7f7f7;
+margin-left: 8px;
+font-size: 105%;
+}
+h5, h6 {
+border-bottom: 1px solid #ccc;
+font-size: 105%;
+}
+a {
+color: #0033dd;
+text-decoration: none;
+}
+a:hover {
+color: #6666ff; }
+a:visited {
+color: #800080; }
+a:visited:hover {
+color: #BB00BB; }
+a[href^="http:"] {
+text-decoration: underline; }
+a[href^="https:"] {
+text-decoration: underline; }
+
+code > span.kw { color: #555; font-weight: bold; } 
+code > span.dt { color: #902000; } 
+code > span.dv { color: #40a070; } 
+code > span.bn { color: #d14; } 
+code > span.fl { color: #d14; } 
+code > span.ch { color: #d14; } 
+code > span.st { color: #d14; } 
+code > span.co { color: #888888; font-style: italic; } 
+code > span.ot { color: #007020; } 
+code > span.al { color: #ff0000; font-weight: bold; } 
+code > span.fu { color: #900; font-weight: bold; } 
+code > span.er { color: #a61717; background-color: #e3d2d2; } 
+</style>
+
+
+
+
+</head>
+
+<body>
+
+
+
+
+<h1 class="title toc-ignore">Comparison with other packages</h1>
+<h4 class="author">Johan Larsson</h4>
+<h4 class="date">2026-06-30</h4>
+
+
+
+<p>This vignette compares <strong>eulerr</strong> with the other R
+packages that genuinely fit <em>area-proportional</em> Euler and Venn
+diagrams, both quantitatively (accuracy and speed) and qualitatively
+(features and scope).</p>
+<div id="what-counts-as-a-competitor" class="section level2">
+<h2>What counts as a competitor</h2>
+<p>An area-proportional diagram is one in which each region’s
+<em>area</em> is made proportional to the quantity it represents.
+Surprisingly few R packages actually solve this geometric fitting
+problem. Most Venn/Euler packages draw fixed, schematic shapes and
+encode quantities through labels or color instead of area.</p>
+<p>On CRAN and Bioconductor, the packages that really fit
+area-proportional diagrams are:</p>
+<ul>
+<li><strong>eulerr</strong> — circles, ellipses, or axis-aligned
+rectangles/squares via numerical optimization; reports
+<code>stress</code> and <code>diagError</code> goodness-of-fit
+statistics.</li>
+<li><strong>venneuler</strong> — Wilkinson’s circle algorithm <span class="citation">(Wilkinson 2012)</span>; circles only; Java-based
+(depends on rJava).</li>
+<li><strong>nVennR</strong> — the nVenn algorithm <span class="citation">(Pérez-Silva et al. 2018)</span>; quasi-proportional,
+n-dimensional diagrams built from irregular polygons. Distributed via
+GitHub.</li>
+<li><strong>BioVenn</strong> — accurate 2–3 circle diagrams from
+identifier lists <span class="citation">(Hulsen 2021)</span>.</li>
+<li><strong>vennplot</strong> — 2D circles and 3D spheres for 2–3 sets
+<span class="citation">(Xu et al. 2017)</span>; currently dormant on
+CRAN.</li>
+<li><strong>VennDiagram</strong> — a drawing package whose
+<em>scaled</em> mode is genuinely area-proportional for two circles only
+<span class="citation">(Chen and Boutros 2011)</span>.</li>
+</ul>
+<p>The <a href="#excluded-packages">last section</a> lists the many
+packages that are <em>not</em> area-proportional fitters and explains
+why they are excluded.</p>
+</div>
+<div id="how-accuracy-is-measured" class="section level2">
+<h2>How accuracy is measured</h2>
+<p>Comparing fitters fairly is subtle because they optimize different
+objectives. A package that minimizes overall squared error will look bad
+if scored on the single worst region, and vice versa. We therefore
+compare <strong>per objective</strong>: for each competitor we configure
+eulerr to optimize the <em>same</em> objective and score both packages
+on the <em>same</em> metric.</p>
+<p>To make the metric identical across packages, we ignore each
+package’s self-reported diagnostics and instead recompute the fit from
+its <em>realized geometry</em>. We turn the fitted shapes into polygons,
+compute the area of every disjoint region with <code>polyclip</code>,
+and evaluate eulerr’s own statistics on those areas:</p>
+<ul>
+<li><strong>stress</strong> — the normalized residual sum of squares
+from venneuler, <span class="math inline">\(\sum_i (A_i -
+\beta\omega_i)^2 \big/ \sum_i A_i^2\)</span>, with <span class="math inline">\(\beta = \sum_i A_i\omega_i \big/ \sum_i
+\omega_i^2\)</span>.</li>
+<li><strong>diagError</strong> — the largest absolute difference between
+a region’s realized and target <em>proportion</em>, <span class="math inline">\(\max_i |A_i/\sum_k A_k - \omega_i/\sum_k
+\omega_k|\)</span> (from eulerAPE, <span class="citation">(Micallef and
+Rodgers 2014)</span>).</li>
+</ul>
+<p>Here <span class="math inline">\(\omega_i\)</span> is the input size
+of region <span class="math inline">\(i\)</span> and <span class="math inline">\(A_i\)</span> its realized area. Both statistics
+are scale-invariant, so packages that work in different coordinate
+systems remain comparable. We benchmark on a mix of small hand-built
+configurations and harder cases derived from eulerr’s bundled
+<code>fruits</code> and <code>organisms</code> datasets, plus a five-set
+example.</p>
+<p>The three comparisons are:</p>
+<table>
+<colgroup>
+<col width="12%" />
+<col width="36%" />
+<col width="38%" />
+<col width="11%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th>Comparison</th>
+<th>Competitor optimizes</th>
+<th>eulerr setting</th>
+<th>Scored on</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>A</td>
+<td>overall fit (stress)</td>
+<td><code>loss = &quot;stress&quot;</code>, circles</td>
+<td>stress</td>
+</tr>
+<tr class="even">
+<td>B</td>
+<td>region proportionality</td>
+<td><code>loss = &quot;diag_error&quot;</code>, circles</td>
+<td>diagError</td>
+</tr>
+<tr class="odd">
+<td>C</td>
+<td>overlap areas (2–3 circles)</td>
+<td><code>loss = &quot;stress&quot;</code>, circles</td>
+<td>stress</td>
+</tr>
+</tbody>
+</table>
+<p>In each comparison eulerr’s default <strong>ellipse</strong> fit is
+included as a reference (<code>eulerr (ellipse)</code>): ellipses have
+more degrees of freedom than circles and typically fit better, but the
+head-to-head against each circle-based competitor uses eulerr’s circle
+mode.</p>
+</div>
+<div id="accuracy" class="section level2">
+<h2>Accuracy</h2>
+<blockquote>
+<p>The stored results were generated <strong>without any competitor
+package installed</strong>, so only eulerr’s own numbers are shown
+below. Install venneuler, BioVenn, and nVennR and re-run
+<code>data-raw/benchmarks.R</code> for the full comparison.</p>
+</blockquote>
+<p><strong>A: circles vs. venneuler</strong> — lower stress is
+better.</p>
+<table>
+<thead>
+<tr class="header">
+<th align="left"></th>
+<th align="right">eulerr (circle)</th>
+<th align="right">eulerr (ellipse)</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td align="left">two-set</td>
+<td align="right">4.1e-18</td>
+<td align="right">4.1e-18</td>
+</tr>
+<tr class="even">
+<td align="left">three-set</td>
+<td align="right">0.00096</td>
+<td align="right">0.00091</td>
+</tr>
+<tr class="odd">
+<td align="left">fruits</td>
+<td align="right">0.00026</td>
+<td align="right">0.00034</td>
+</tr>
+<tr class="even">
+<td align="left">organisms</td>
+<td align="right">0.35</td>
+<td align="right">0.15</td>
+</tr>
+<tr class="odd">
+<td align="left">kinases</td>
+<td align="right">0.011</td>
+<td align="right">0.0027</td>
+</tr>
+</tbody>
+</table>
+<p><strong>B: region proportionality vs. nVennR</strong> — lower
+diagError is better.</p>
+<table>
+<thead>
+<tr class="header">
+<th align="left"></th>
+<th align="right">eulerr (circle)</th>
+<th align="right">eulerr (ellipse)</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td align="left">three-set</td>
+<td align="right">0.0072</td>
+<td align="right">0.00032</td>
+</tr>
+<tr class="even">
+<td align="left">organisms</td>
+<td align="right">0.12</td>
+<td align="right">0.13</td>
+</tr>
+<tr class="odd">
+<td align="left">kinases</td>
+<td align="right">0.033</td>
+<td align="right">0.033</td>
+</tr>
+</tbody>
+</table>
+<p><strong>C: circles vs. BioVenn</strong> — lower stress is better.</p>
+<table>
+<thead>
+<tr class="header">
+<th align="left"></th>
+<th align="right">eulerr (circle)</th>
+<th align="right">eulerr (ellipse)</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td align="left">two-set</td>
+<td align="right">4.1e-18</td>
+<td align="right">4.1e-18</td>
+</tr>
+<tr class="even">
+<td align="left">three-set</td>
+<td align="right">0.00096</td>
+<td align="right">0.00094</td>
+</tr>
+<tr class="odd">
+<td align="left">fruits</td>
+<td align="right">0.00026</td>
+<td align="right">0.00035</td>
+</tr>
+</tbody>
+</table>
+<div class="float">
+<img role="img" aria-label="Fit error by dataset and package, faceted by comparison. Lower is better. Each competitor is matched against eulerr configured for the same objective." src="data:image/png;base64,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" alt="Fit error by dataset and package, faceted by comparison. Lower is better. Each competitor is matched against eulerr configured for the same objective." />
+<div class="figcaption">Fit error by dataset and package, faceted by
+comparison. Lower is better. Each competitor is matched against eulerr
+configured for the same objective.</div>
+</div>
+</div>
+<div id="speed" class="section level2">
+<h2>Speed</h2>
+<p>Runtimes are the median wall-clock time of repeated fits on the
+machine that generated the results (see <code>sessionInfo</code> in the
+stored <code>meta</code>). They are indicative rather than definitive —
+venneuler pays a fixed JVM cost, and absolute numbers depend on hardware
+— but they show the broad picture.</p>
+<p>Median fit time (ms), by dataset and package:</p>
+<table>
+<thead>
+<tr class="header">
+<th align="left"></th>
+<th align="right">eulerr (circle)</th>
+<th align="right">eulerr (ellipse)</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td align="left">two-set</td>
+<td align="right">1.0</td>
+<td align="right">1.0</td>
+</tr>
+<tr class="even">
+<td align="left">three-set</td>
+<td align="right">32.0</td>
+<td align="right">24.0</td>
+</tr>
+<tr class="odd">
+<td align="left">fruits</td>
+<td align="right">1.0</td>
+<td align="right">9.0</td>
+</tr>
+<tr class="even">
+<td align="left">organisms</td>
+<td align="right">164.0</td>
+<td align="right">281.0</td>
+</tr>
+<tr class="odd">
+<td align="left">kinases</td>
+<td align="right">60.0</td>
+<td align="right">183.0</td>
+</tr>
+</tbody>
+</table>
+<div class="float">
+<img role="img" aria-label="Median fit time (ms, log scale) by dataset and package." src="data:image/png;base64,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" alt="Median fit time (ms, log scale) by dataset and package." />
+<div class="figcaption">Median fit time (ms, log scale) by dataset and
+package.</div>
+</div>
+</div>
+<div id="feature-comparison" class="section level2">
+<h2>Feature comparison</h2>
+<p>Accuracy and speed are only part of the story. The table below
+summarizes how the packages differ in scope and capabilities.</p>
+<table>
+<colgroup>
+<col width="6%" />
+<col width="19%" />
+<col width="7%" />
+<col width="8%" />
+<col width="25%" />
+<col width="16%" />
+<col width="8%" />
+<col width="8%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th align="left">Package</th>
+<th align="left">Shapes</th>
+<th align="left">Max sets</th>
+<th align="left">Proportional</th>
+<th align="left">Input</th>
+<th align="left">Fit reported</th>
+<th align="left">Key dependency</th>
+<th align="left">Source</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td align="left">eulerr</td>
+<td align="left">circle, ellipse, rectangle, square</td>
+<td align="left">many</td>
+<td align="left">approximate</td>
+<td align="left">vectors, data frames, matrices, tables, lists</td>
+<td align="left">stress, diagError, regionError</td>
+<td align="left">none (Rust)</td>
+<td align="left">CRAN</td>
+</tr>
+<tr class="even">
+<td align="left">venneuler</td>
+<td align="left">circle</td>
+<td align="left">many</td>
+<td align="left">approximate</td>
+<td align="left">named vector, data frame</td>
+<td align="left">stress</td>
+<td align="left">rJava / Java</td>
+<td align="left">CRAN</td>
+</tr>
+<tr class="odd">
+<td align="left">nVennR</td>
+<td align="left">irregular polygon</td>
+<td align="left">many</td>
+<td align="left">quasi</td>
+<td align="left">lists</td>
+<td align="left">none</td>
+<td align="left">C++</td>
+<td align="left">GitHub</td>
+</tr>
+<tr class="even">
+<td align="left">BioVenn</td>
+<td align="left">circle</td>
+<td align="left">2–3</td>
+<td align="left">accurate (2–3)</td>
+<td align="left">ID lists</td>
+<td align="left">none</td>
+<td align="left">none</td>
+<td align="left">CRAN</td>
+</tr>
+<tr class="odd">
+<td align="left">vennplot</td>
+<td align="left">circle (2D), sphere (3D)</td>
+<td align="left">2–3</td>
+<td align="left">approximate</td>
+<td align="left">counts, lists</td>
+<td align="left">none</td>
+<td align="left">Rcpp, rgl</td>
+<td align="left">CRAN (dormant)</td>
+</tr>
+<tr class="even">
+<td align="left">VennDiagram</td>
+<td align="left">circle</td>
+<td align="left">4 (2 scaled)</td>
+<td align="left">2 sets only</td>
+<td align="left">counts</td>
+<td align="left">none</td>
+<td align="left">none</td>
+<td align="left">CRAN</td>
+</tr>
+</tbody>
+</table>
+<p>A few points worth drawing out:</p>
+<ul>
+<li><strong>eulerr is the only package that fits ellipses</strong> (and
+rectangles/squares). Ellipses can represent many three-set
+configurations exactly that are impossible with circles, which is why
+eulerr’s ellipse fits score better than every circle-based package on
+the harder datasets above.</li>
+<li><strong>eulerr and venneuler are the only packages that report a
+numeric goodness-of-fit.</strong> Without one, it is impossible to know
+how much a diagram distorts the data — and area-proportional diagrams
+with three or more sets almost always distort it to some degree.</li>
+<li><strong>eulerr has no system dependencies beyond a Rust toolchain at
+build time</strong>, whereas venneuler requires a working Java
+installation through rJava, which is a common source of installation
+trouble.</li>
+<li><strong>nVennR achieves closer proportionality only by abandoning
+smooth shapes</strong> for irregular polygons. This is the central
+trade-off: smooth, interpretable shapes (eulerr, venneuler) versus exact
+topology with jagged regions (nVennR).</li>
+</ul>
+</div>
+<div id="excluded-packages" class="section level2">
+<h2>Excluded packages</h2>
+<p>Many widely cited Venn/Euler packages are <em>not</em>
+area-proportional fitters and are therefore outside the scope of this
+comparison.</p>
+<table>
+<colgroup>
+<col width="36%" />
+<col width="63%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th align="left">Package</th>
+<th align="left">Reason</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td align="left">venn, ggVennDiagram, ggvenn, RVenn, gplots</td>
+<td align="left">Draw fixed, schematic shapes; quantity shown via labels
+or color, not area</td>
+</tr>
+<tr class="even">
+<td align="left">UpSetR</td>
+<td align="left">Not a Venn/Euler diagram at all (UpSet matrix/bar
+charts)</td>
+</tr>
+<tr class="odd">
+<td align="left">colorfulVennPlot</td>
+<td align="left">Archived from CRAN; only a 2-set helper, never a
+general fitter</td>
+</tr>
+<tr class="even">
+<td align="left">VennMaster</td>
+<td align="left">Area-proportional, but a standalone Java application —
+not an R package</td>
+</tr>
+<tr class="odd">
+<td align="left">Vennerable</td>
+<td align="left">Area-weighted, but hosted on R-Forge/GitHub, not CRAN
+or Bioconductor</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div id="caveats" class="section level2">
+<h2>Caveats</h2>
+<ul>
+<li><strong>“Area-proportional” is a spectrum.</strong> For three or
+more sets, exact solutions with circles or ellipses are often
+geometrically impossible, so eulerr and venneuler produce
+<em>approximate</em> diagrams; nVennR reaches closer proportionality
+only by giving up smooth shapes. Any honest comparison should report fit
+error, not merely whether a diagram was produced — which is exactly what
+the accuracy section above does.</li>
+<li><strong>Self-description bias.</strong> The BioVenn documentation
+claims it is “the only R package that can automatically generate an
+accurate area-proportional Venn diagram,” which is not literally true;
+eulerr, venneuler, and vennplot also produce accurate area-proportional
+circle diagrams.</li>
+<li><strong>Reproducibility.</strong> The numbers here come from one
+machine and one set of package versions. To regenerate them, install the
+competitors (<code>venneuler</code>, <code>BioVenn</code>, and
+<code>nVennR</code> from GitHub) and run
+<code>data-raw/benchmarks.R</code>.</li>
+</ul>
+</div>
+<div id="references" class="section level2 unnumbered">
+<h2 class="unnumbered">References</h2>
+<div id="refs" class="references csl-bib-body hanging-indent">
+<div id="ref-Chen_2011" class="csl-entry">
+Chen, Hanbo, and Paul C. Boutros. 2011. <span>“<span>VennDiagram</span>:
+A Package for the Generation of Highly-Customizable Venn and Euler
+Diagrams in <span>R</span>.”</span> <em>BMC Bioinformatics</em> 12 (1):
+35. <a href="https://doi.org/10.1186/1471-2105-12-35">https://doi.org/10.1186/1471-2105-12-35</a>.
+</div>
+<div id="ref-Hulsen_2021" class="csl-entry">
+Hulsen, Tim. 2021. <span>“<span>BioVenn</span> – an <span>R</span> and
+<span>Python</span> Package for the Comparison and Visualization of
+Biological Lists Using Area-Proportional Venn Diagrams.”</span> <em>Data
+Science</em> 4 (1): 51–61. <a href="https://doi.org/10.3233/DS-210032">https://doi.org/10.3233/DS-210032</a>.
+</div>
+<div id="ref-Micallef_2014" class="csl-entry">
+Micallef, Luana, and Peter Rodgers. 2014. <span>“<span class="nocase">eulerForce</span>: Force-Directed Layout for
+<span>Euler</span> Diagrams.”</span> <em>Journal of Visual Languages and
+Computing</em> 25 (6): 924–34. <a href="https://doi.org/10.1016/j.jvlc.2014.09.002">https://doi.org/10.1016/j.jvlc.2014.09.002</a>.
+</div>
+<div id="ref-Perez-Silva_2018" class="csl-entry">
+Pérez-Silva, José G., Miguel Araujo-Voces, and Víctor Quesada. 2018.
+<span>“nVenn: Generalized, Quasi-Proportional Venn and Euler
+Diagrams.”</span> <em>Bioinformatics</em> 34 (13): 2322–24. <a href="https://doi.org/10.1093/bioinformatics/bty109">https://doi.org/10.1093/bioinformatics/bty109</a>.
+</div>
+<div id="ref-wilkinson_exact_2012" class="csl-entry">
+Wilkinson, L. 2012. <span>“Exact and <span>Approximate
+Area</span>-<span>Proportional Circular Venn</span> and <span>Euler
+Diagrams</span>.”</span> <em>IEEE Transactions on Visualization and
+Computer Graphics</em> 18 (2): 321–31. <a href="https://doi.org/10.1109/TVCG.2011.56">https://doi.org/10.1109/TVCG.2011.56</a>.
+</div>
+<div id="ref-Xu_2017" class="csl-entry">
+Xu, Zehao, R. Wayne Oldford, and Martin Lysy. 2017. <em><span class="nocase">vennplot</span>: Venn Diagrams in 2D and 3D</em>. <a href="https://CRAN.R-project.org/package=vennplot">https://CRAN.R-project.org/package=vennplot</a>.
+</div>
+</div>
+</div>
+
+
+
+<!-- code folding -->
+
+
+<!-- dynamically load mathjax for compatibility with self-contained -->
+<script>
+  (function () {
+    var script = document.createElement("script");
+    script.type = "text/javascript";
+    script.src  = "https://mathjax.rstudio.com/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML";
+    document.getElementsByTagName("head")[0].appendChild(script);
+  })();
+</script>
+
+</body>
+</html>

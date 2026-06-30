@@ -10,11 +10,15 @@ fit_euler_diagram(
   input,
   shape,
   loss,
+  loss_eps,
+  optimizer,
+  n_restarts,
   extraopt_threshold,
   tolerance,
   max_sets,
   complement,
-  seed
+  seed,
+  n_threads
 )
 }
 \description{

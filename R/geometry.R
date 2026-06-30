@@ -5,7 +5,7 @@
 #' directly since both are axis-aligned in eunoia.
 #'
 #' @param shapes the `$shapes` data frame of a fitted euler object (after
-#'   dropping NA rows for empty sets), or — for legacy callers — the
+#'   dropping NA rows for empty sets), or (for legacy callers) the
 #'   numeric `h` vector. When `h` is numeric the function falls back to
 #'   the legacy ellipse signature for back-compat with external code.
 #' @param k,a,b,phi legacy ellipse parameters; only used when `shapes` is
@@ -68,6 +68,19 @@ shape_bounding_box <- function(shapes) {
       list(
         xlim = range(c(h - half, h + half)),
         ylim = range(c(k - half, k + half))
+      )
+    },
+    rotated_rectangle = {
+      # Axis-aligned extent of a rectangle rotated by `phi` about its center.
+      half_w <- shapes$width / 2
+      half_h <- shapes$height / 2
+      c_phi <- abs(cos(shapes$phi))
+      s_phi <- abs(sin(shapes$phi))
+      ext_x <- half_w * c_phi + half_h * s_phi
+      ext_y <- half_w * s_phi + half_h * c_phi
+      list(
+        xlim = range(c(h - ext_x, h + ext_x)),
+        ylim = range(c(k - ext_y, k + ext_y))
       )
     },
     ellipse_bounding_box(h, k, shapes$a, shapes$b, shapes$phi)

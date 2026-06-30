@@ -43,7 +43,7 @@ text element per region below the quantity.}
 \item{legend}{arguments to \code{\link[grid:legendGrob]{grid::legendGrob()}} as well as \code{col}, \code{alpha},
 \code{fontsize}, \code{cex}, \code{symbol_size} (symbol size multiplier, independent of text
 size; defaults to \code{cex} if \code{NULL}), \code{fontfamily}, \code{lineheight}, and \code{font}}
-\item{main}{arguments to \code{\link[grid:grid.text]{grid::textGrob()}}}
+\item{main}{arguments to \code{\link[grid:textGrob]{grid::textGrob()}}}
 \item{complement}{a list of styling defaults for the container box
 and its complement label drawn when \code{\link[=euler]{euler()}} is called with
 \verb{complement =}. Items: \code{fill}, \code{alpha}, \code{col}, \code{lty}, \code{lwd}, \code{lex},
@@ -53,6 +53,12 @@ and its complement label drawn when \code{\link[=euler]{euler()}} is called with
 elements in plots from \code{\link[=plot.euler]{plot.euler()}}, which you can change
 if you, for instance, want to increase spacing between labels,
 quantities, and percentages.}
+\item{margin}{a \code{\link[grid:unit]{grid::unit()}} giving the fixed margin reserved
+around the diagram inside the plot canvas. Increase it if shape
+outlines or exterior labels are clipped at the plot edge, or
+decrease it to give the diagram more room. A fixed (rather than
+relative) unit is recommended so that the margin keeps pace with
+stroke width and label text, which are themselves fixed sizes.}
 \item{composition}{a list controlling how \code{eulergram} objects are
 arranged when composed via \code{|} or \code{/}. Contains a single \code{spacing}
 item (a \code{\link[grid:unit]{grid::unit()}}) that sets the gap between adjacent plots.}
