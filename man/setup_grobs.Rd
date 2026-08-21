@@ -10,13 +10,16 @@ setup_grobs(
   patterns,
   edges,
   labels,
+  set_labels = NULL,
   quantities,
   annotations = NULL,
+  glyphs = NULL,
   complement = NULL,
   number,
   merged_sets,
   n_vertices = 200L,
-  placement_opts = NULL
+  placement_opts = NULL,
+  combo_labels = NULL
 )
 }
 \arguments{
@@ -30,11 +33,27 @@ setup_grobs(
 
 \item{labels}{labels params}
 
+\item{set_labels}{exterior set-label params}
+
 \item{quantities}{quantities params}
+
+\item{annotations}{annotations params}
+
+\item{glyphs}{glyph params}
+
+\item{complement}{complement label params}
 
 \item{number}{current diagram number}
 
 \item{merged_sets}{sets that are the same and have been merged}
+
+\item{n_vertices}{number of vertices used to render each shape}
+
+\item{placement_opts}{label placement options, or \code{NULL} for the defaults}
+
+\item{combo_labels}{region labels in the order of the per-region graphical
+parameters (\code{fills$gp}, \code{patterns$gp}), used to associate each region's
+geometry with its parameters by name rather than position}
 }
 \value{
 A \code{\link[grid:gList]{grid::gList()}} is returned.

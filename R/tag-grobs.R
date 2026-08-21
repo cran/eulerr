@@ -8,6 +8,25 @@
 #' so the bbox center matches the anchor eunoia placed and leader
 #' endpoints land on the actual bbox edge.
 #'
+#' @param ax,ay the tag anchor, in native units
+#' @param kind the placement kind eunoia returned (interior, exterior, ...)
+#' @param tx,ty the tether point on the shape, in native units
+#' @param lend_x,lend_y the leader endpoint on the tag bbox, in native units
+#' @param label_text,quantity_text,annotation_text the three text components
+#' @param has_label,has_quantity,has_annotation whether each component is
+#'   drawn
+#' @param label_gp,quantity_gp,annotation_gp per-component [grid::gpar()]
+#' @param label_rot,quantity_rot,annotation_rot per-component rotation, in
+#'   degrees
+#' @param number the diagram's region index, used to name the grobs
+#' @param leader_gp_list [grid::gpar()] for the leader line, or `NULL` for
+#'   no leader
+#' @param padding vertical separation between components, as a
+#'   [grid::unit()]
+#' @param waypoints_x,waypoints_y intermediate leader vertices, in native
+#'   units
+#' @param name_prefix prefix for the generated grob names
+#'
 #' @keywords internal
 build_tag_grobs <- function(
   ax,
@@ -220,6 +239,18 @@ build_tag_grobs <- function(
 #' supplied by eunoia (`LabelPlacement::leader_end`). Falls back to the anchor
 #' when the leader endpoint isn't finite so older / partial placement results
 #' still draw something sensible.
+#'
+#' @param ax,ay the tag anchor, in native units
+#' @param kind the placement kind eunoia returned; anything other than
+#'   `"interior"` gets a leader
+#' @param tx,ty the tether point on the shape, in native units
+#' @param lend_x,lend_y the leader endpoint on the tag bbox, in native units
+#' @param waypoints_x,waypoints_y intermediate leader vertices, in native
+#'   units
+#' @param leader_gp_list [grid::gpar()] for the leader line, or `NULL`
+#' @param fallback_gp [grid::gpar()] used when `leader_gp_list` is `NULL`
+#' @param name name to give the returned grob
+#'
 #' @keywords internal
 build_leader_grob <- function(
   ax,
@@ -235,7 +266,9 @@ build_leader_grob <- function(
   fallback_gp,
   name
 ) {
-  is_exterior <- !is.null(kind) && !is.na(kind) && nzchar(kind) &&
+  is_exterior <- !is.null(kind) &&
+    !is.na(kind) &&
+    nzchar(kind) &&
     !identical(kind, "interior")
   if (!is_exterior) {
     return(grid::nullGrob(name = name))
@@ -256,7 +289,8 @@ build_leader_grob <- function(
   waypoints_y <- waypoints_y[wp_ok]
 
   fallback_col <- if (
-    !is.null(fallback_gp) && !is.null(fallback_gp$col) &&
+    !is.null(fallback_gp) &&
+      !is.null(fallback_gp$col) &&
       length(fallback_gp$col) >= 1L
   ) {
     fallback_gp$col[1L]
@@ -292,6 +326,11 @@ build_leader_grob <- function(
 #' Builds the gList via [build_tag_grobs()] and stashes the text / gpar bundle
 #' on the resulting `EulerTag` gTree so [makeContent.EulerTags()] can rebuild it
 #' at draw time with fresh measurements.
+#'
+#' @param data one row of the placed `centers` data frame
+#' @param labels,quantities,annotations the three tag component parameter
+#'   lists, each with a `$gp`
+#' @param number the diagram's region index, used to name the grobs
 #'
 #' @keywords internal
 setup_tag <- function(data, labels, quantities, annotations, number) {
@@ -394,6 +433,11 @@ setup_tag <- function(data, labels, quantities, annotations, number) {
 #' comes either from `complement$label` (user override) or from
 #' `container_data$quantity_label` (the fitted complement count).
 #'
+#' @param container_data the complement (container) region's data
+#' @param complement the complement parameter list, with a `$gp` and an
+#'   optional `$label` override
+#' @param number the diagram's region index, used to name the grobs
+#'
 #' @keywords internal
 setup_complement_tag <- function(container_data, complement, number) {
   if (is.null(container_data)) {
@@ -404,7 +448,8 @@ setup_complement_tag <- function(container_data, complement, number) {
     label_text <- container_data$quantity_label
   }
   if (
-    is.null(label_text) || is.na(label_text) ||
+    is.null(label_text) ||
+      is.na(label_text) ||
       !is.finite(container_data$label_x) ||
       !is.finite(container_data$label_y)
   ) {
@@ -480,6 +525,9 @@ setup_complement_tag <- function(container_data, complement, number) {
 }
 
 #' Measure one tag's combined AABB in the current viewport's native units.
+#' @param tag an `EulerTag` gTree
+#' @param padding_native vertical separation between components, in native
+#'   units
 #' @keywords internal
 measure_tag_native <- function(tag, padding_native) {
   label_w <- 0
@@ -541,6 +589,7 @@ measure_tag_native <- function(tag, padding_native) {
 }
 
 #' Find the `EulerTags` child of an `EulerPanel`, if any.
+#' @param panel an `EulerPanel` gTree
 #' @keywords internal
 find_eulertags <- function(panel) {
   for (child in panel$children) {
@@ -551,10 +600,23 @@ find_eulertags <- function(panel) {
   NULL
 }
 
+find_euler_child <- function(panel, class) {
+  for (child in panel$children) {
+    if (inherits(child, class)) {
+      return(child)
+    }
+  }
+  NULL
+}
+
 #' Measure every drawable tag inside `tags_grob` against the current viewport.
 #' Returns parallel vectors of combo / width / height suitable for handing to
 #' [place_euler_labels()], plus the resolved leader gap in native units (so the
 #' FFI sees one number per draw pass).
+#' @param tags_grob an `EulerTags` gTree
+#' @param padding vertical separation between tag components, as a
+#'   [grid::unit()]
+#' @param gap leader-tip gap; see [resolve_gap_native()]
 #' @keywords internal
 measure_all_tags <- function(tags_grob, padding, gap = NULL) {
   if (is.null(tags_grob) || length(tags_grob$children) == 0L) {
@@ -573,7 +635,7 @@ measure_all_tags <- function(tags_grob, padding, gap = NULL) {
   for (child in tags_grob$children) {
     sz <- measure_tag_native(child, padding_native)
     if (sz$w > 0 && sz$h > 0 && is.finite(sz$w) && is.finite(sz$h)) {
-      combos <- c(combos, if (is.null(child$combo_key)) "" else child$combo_key)
+      combos <- c(combos, child$combo_key %||% "")
       widths <- c(widths, sz$w)
       heights <- c(heights, sz$h)
     }
@@ -598,6 +660,11 @@ EULER_PANEL_PAD_PT <- 3
 #' Pad an axis range by `pt_pad` points, converted to native units against a
 #' measurement viewport with the supplied scale. Returns the original range
 #' unchanged if the conversion isn't finite (e.g. zero range, no device).
+#' @param lim the axis range to pad
+#' @param pt_pad padding in points
+#' @param axis which axis `lim` belongs to
+#' @param layout_pos_row,layout_pos_col layout cell of the measurement
+#'   viewport, so the conversion sees the panel's real size
 #' @keywords internal
 pad_axis_native <- function(
   lim,
@@ -645,6 +712,11 @@ pad_axis_native <- function(
 #' The smaller dimension is padded if the label-driven canvas bbox is
 #' asymmetric.
 #'
+#' @param x an `EulerPanel` gTree.
+#'
+#' @return `x`, with its viewport's `xscale`/`yscale` set to the label-aware
+#'   bounding box.
+#'
 #' @export
 #' @keywords internal
 makeContext.EulerPanel <- function(x) {
@@ -652,7 +724,8 @@ makeContext.EulerPanel <- function(x) {
   geom_xlim <- x$geom_xlim
   geom_ylim <- x$geom_ylim
   if (
-    is.null(geom_xlim) || is.null(geom_ylim) ||
+    is.null(geom_xlim) ||
+      is.null(geom_ylim) ||
       !all(is.finite(c(geom_xlim, geom_ylim)))
   ) {
     return(x)
@@ -692,8 +765,11 @@ makeContext.EulerPanel <- function(x) {
   }
 
   tags_grob <- find_eulertags(x)
+  set_labels_grob <- find_euler_child(x, "EulerSetLabels")
   if (
-    is.null(tags_grob) || length(tags_grob$children) == 0L || is.null(shapes) ||
+    ((is.null(tags_grob) || length(tags_grob$children) == 0L) &&
+      (is.null(set_labels_grob) || length(set_labels_grob$children) == 0L)) ||
+      is.null(shapes) ||
       NROW(shapes) == 0L
   ) {
     return(x)
@@ -721,7 +797,9 @@ makeContext.EulerPanel <- function(x) {
   cell_h_pt <- grid::convertHeight(grid::unit(1, "npc"), "pt", valueOnly = TRUE)
   grid::popViewport()
   if (
-    !is.finite(cell_w_pt) || !is.finite(cell_h_pt) || cell_w_pt <= 0 ||
+    !is.finite(cell_w_pt) ||
+      !is.finite(cell_h_pt) ||
+      cell_w_pt <= 0 ||
       cell_h_pt <= 0
   ) {
     cell_ar <- geom_ar
@@ -794,43 +872,62 @@ makeContext.EulerPanel <- function(x) {
       measure_all_tags(tags_grob, x$padding, placement_opts$gap),
       error = function(e) NULL
     )
+    set_placements <- tryCatch(
+      if (!is.null(set_labels_grob)) place_set_label_tree(set_labels_grob),
+      error = function(e) NULL
+    )
     grid::popViewport()
-    if (is.null(measurements) || length(measurements$combos) == 0L) {
+    if (
+      (is.null(measurements) || length(measurements$combos) == 0L) &&
+        is.null(set_placements)
+    ) {
       break
     }
 
-    placements <- tryCatch(
-      place_euler_labels(
-        set_names = rownames(shapes),
-        shape = shape_type,
-        h = shapes$h,
-        k = shapes$k,
-        a = shapes$a,
-        b = shapes$b,
-        phi = shapes$phi,
-        width = shapes$width,
-        height = shapes$height,
-        side = shapes$side,
-        container_h = if (has_container) container$h else NULL,
-        container_k = if (has_container) container$k else NULL,
-        container_width = if (has_container) container$width else NULL,
-        container_height = if (has_container) container$height else NULL,
-        n_vertices = as.integer(x$n_vertices),
-        label_combos = measurements$combos,
-        label_widths = measurements$widths,
-        label_heights = measurements$heights,
-        placement = placement_opts$placement,
-        placement_margin = placement_opts$margin,
-        placement_iterations = placement_opts$iterations,
-        placement_min_gap = placement_opts$min_gap,
-        placement_tether = placement_opts$tether,
-        placement_leader_gap = measurements$gap_native,
-        label_precision = precision
-      ),
-      error = function(e) NULL
-    )
+    placements <- if (
+      !is.null(measurements) && length(measurements$combos) > 0L
+    ) {
+      tryCatch(
+        place_euler_labels(
+          set_names = rownames(shapes),
+          shape = shape_type,
+          h = shapes$h,
+          k = shapes$k,
+          a = shapes$a,
+          b = shapes$b,
+          phi = shapes$phi,
+          width = shapes$width,
+          height = shapes$height,
+          side = shapes$side,
+          container_h = if (has_container) container$h else NULL,
+          container_k = if (has_container) container$k else NULL,
+          container_width = if (has_container) container$width else NULL,
+          container_height = if (has_container) container$height else NULL,
+          n_vertices = as.integer(x$n_vertices),
+          label_combos = measurements$combos,
+          label_widths = measurements$widths,
+          label_heights = measurements$heights,
+          placement = placement_opts$placement,
+          placement_margin = placement_opts$margin,
+          placement_iterations = placement_opts$iterations,
+          placement_min_gap = placement_opts$min_gap,
+          placement_tether = placement_opts$tether,
+          placement_leader_gap = measurements$gap_native,
+          label_precision = precision
+        ),
+        error = function(e) NULL
+      )
+    } else {
+      list(
+        canvas_bbox_h = mean(geom_xlim),
+        canvas_bbox_k = mean(geom_ylim),
+        canvas_bbox_width = diff(geom_xlim),
+        canvas_bbox_height = diff(geom_ylim)
+      )
+    }
     if (
-      is.null(placements) || !is.finite(placements$canvas_bbox_h) ||
+      is.null(placements) ||
+        !is.finite(placements$canvas_bbox_h) ||
         !is.finite(placements$canvas_bbox_width) ||
         placements$canvas_bbox_width <= 0 ||
         placements$canvas_bbox_height <= 0
@@ -842,6 +939,32 @@ makeContext.EulerPanel <- function(x) {
     cb_xmax <- placements$canvas_bbox_h + placements$canvas_bbox_width / 2
     cb_ymin <- placements$canvas_bbox_k - placements$canvas_bbox_height / 2
     cb_ymax <- placements$canvas_bbox_k + placements$canvas_bbox_height / 2
+    if (
+      !is.null(set_placements) &&
+        is.finite(set_placements$canvas_bbox_width) &&
+        set_placements$canvas_bbox_width > 0
+    ) {
+      cb_xmin <- min(
+        cb_xmin,
+        set_placements$canvas_bbox_h -
+          set_placements$canvas_bbox_width / 2
+      )
+      cb_xmax <- max(
+        cb_xmax,
+        set_placements$canvas_bbox_h +
+          set_placements$canvas_bbox_width / 2
+      )
+      cb_ymin <- min(
+        cb_ymin,
+        set_placements$canvas_bbox_k -
+          set_placements$canvas_bbox_height / 2
+      )
+      cb_ymax <- max(
+        cb_ymax,
+        set_placements$canvas_bbox_k +
+          set_placements$canvas_bbox_height / 2
+      )
+    }
 
     xmin <- min(geom_xlim[1], cb_xmin)
     xmax <- max(geom_xlim[2], cb_xmax)
@@ -903,6 +1026,10 @@ makeContext.EulerPanel <- function(x) {
 #' compute) keep the positions they were built with — typically the setup-time
 #' placement stored on `centers$x` / `centers$y`.
 #'
+#' @param x an `EulerTags` gTree.
+#'
+#' @return `x`, with its children repositioned for the current device size.
+#'
 #' @export
 #' @keywords internal
 makeContent.EulerTags <- function(x) {
@@ -923,7 +1050,7 @@ makeContent.EulerTags <- function(x) {
   heights <- numeric(n)
   for (i in seq_len(n)) {
     child <- x$children[[i]]
-    combos[i] <- if (is.null(child$combo_key)) "" else child$combo_key
+    combos[i] <- child$combo_key %||% ""
     sz <- measure_tag_native(child, padding_native)
     widths[i] <- sz$w
     heights[i] <- sz$h
@@ -1013,7 +1140,7 @@ makeContent.EulerTags <- function(x) {
       padding = child$padding,
       waypoints_x = wp$x,
       waypoints_y = wp$y,
-      name_prefix = if (is.null(child$name_prefix)) "tag" else child$name_prefix
+      name_prefix = child$name_prefix %||% "tag"
     )
     # `grid::setChildren()` updates the internal `childrenOrder` index
     # alongside `$children`; direct `$children <-` assignment leaves

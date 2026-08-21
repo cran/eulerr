@@ -1,38 +1,48 @@
 Package: eulerr
 Title: Area-Proportional Euler and Venn Diagrams
-Version: 8.1.0
-Authors@R: c(person("Johan", "Larsson", email = "johan@jolars.co",
-                    role = c("aut", "cre", "cph"),
-                    comment = c(ORCID = "0000-0002-4029-5945")),
-             person("A. Jonathan R.", "Godfrey", role = "ctb"),
-             person("Peter", "Gustafsson", role = "ctb"),
-             person("David H.", "Eberly", role = "ctb",
-                    comment = "geometric algorithms"),
-             person("Emanuel", "Huber", role = "ctb",
-                    comment = "root solver code"),
-             person("Florian", "Privé", role = "ctb"))
-Description: Generate area-proportional Euler diagrams
-    using numerical optimization. A Euler diagram is a generalization of a Venn
-    diagram, relaxing the criterion that all interactions need to be
-    represented. Diagrams may be fit with circles, ellipses, squares, and
-    rectangles via a wide range of inputs and can be visualized in numerous ways.
-Depends: R (>= 4.2)
-Imports: graphics, grDevices, grid, parallel, stats, utils
-Suggests: covr, knitr, lattice, pBrackets, RConics, rmarkdown,
-        testthat, spelling
+Version: 8.3.0
+Authors@R: 
+    c(
+      person(
+        "Johan",
+        "Larsson",
+        email = "johan@jolars.co",
+        role = c("aut", "cre", "cph"),
+        comment = c(ORCID = "0000-0002-4029-5945")
+      ),
+      person("A. Jonathan R.", "Godfrey", role = "ctb"),
+      person("Peter", "Gustafsson", role = "ctb"),
+      person(
+        "David H.",
+        "Eberly",
+        role = "ctb",
+        comment = "geometric algorithms"
+      ),
+      person("Emanuel", "Huber", role = "ctb", comment = "root solver code"),
+      person("Florian", "Privé", role = "ctb")
+    )
+Description: Generate area-proportional Euler diagrams using numerical
+    optimization. A Euler diagram is a generalization of a Venn diagram,
+    relaxing the criterion that all interactions need to be represented.
+    Diagrams may be fit with circles, ellipses, squares, and rectangles via a
+    wide range of inputs and can be visualized in numerous ways.
 License: MIT + file LICENSE
-Encoding: UTF-8
-LazyData: true
-VignetteBuilder: knitr
 URL: https://github.com/jolars/eulerr,
         https://jolars.github.io/eulerr/, https://eunoia.bz
 BugReports: https://github.com/jolars/eulerr/issues
-Language: en-US
-Config/rextendr/version: 0.4.2
-SystemRequirements: Cargo (Rust's package manager), rustc >= 1.88.0
+Depends: R (>= 4.2)
+Imports: graphics, grDevices, grid, parallel, stats, utils
+Suggests: covr, knitr, lattice, pBrackets, RConics, rmarkdown,
+        spelling, testthat
+VignetteBuilder: knitr
+Config/rextendr/version: 0.5.0
 Config/roxygen2/version: 8.0.0
+Encoding: UTF-8
+Language: en-US
+LazyData: true
+SystemRequirements: Cargo (Rust's package manager), rustc >= 1.88.0
 NeedsCompilation: yes
-Packaged: 2026-06-30 11:49:31 UTC; jola
+Packaged: 2026-08-21 10:39:16 UTC; jola
 Author: Johan Larsson [aut, cre, cph] (ORCID:
     <https://orcid.org/0000-0002-4029-5945>),
   A. Jonathan R. Godfrey [ctb],
@@ -42,4 +52,4 @@ Author: Johan Larsson [aut, cre, cph] (ORCID:
   Florian Privé [ctb]
 Maintainer: Johan Larsson <johan@jolars.co>
 Repository: CRAN
-Date/Publication: 2026-06-30 13:40:09 UTC
+Date/Publication: 2026-08-21 21:50:10 UTC

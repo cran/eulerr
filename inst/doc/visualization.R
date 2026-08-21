@@ -78,6 +78,24 @@ con <- c(
 plot(euler(con), labels = as.character(1:8))
 
 ## -----------------------------------------------------------------------------
+fit <- euler(c(A = 8, B = 6, "A&B" = 3))
+plot(fit, glyphs = TRUE, labels = list(position = "outside"))
+
+## -----------------------------------------------------------------------------
+plot(
+  fit,
+  glyphs = list(
+    mode = "members",
+    labels = list(
+      A = c("Ada", "Grace", "Barbara"),
+      B = c("Alan", "Edsger"),
+      "A&B" = c("Katherine", "Hedy")
+    )
+  ),
+  labels = list(position = "outside")
+)
+
+## -----------------------------------------------------------------------------
 p1 <- plot(euler(c(A = 1, B = 8, "A&B" = 1)), main = "First")
 p2 <- plot(euler(c(A = 1, C = 1, "A&C" = 1)), main = "Second")
 

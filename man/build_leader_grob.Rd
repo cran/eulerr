@@ -2,8 +2,8 @@
 % Please edit documentation in R/tag-grobs.R
 \name{build_leader_grob}
 \alias{build_leader_grob}
-\title{Build the polyline leader for an exterior tag, or \code{\link[grid:nullGrob]{grid::nullGrob()}}
-for interior / missing-tether placements.}
+\title{Build the polyline leader for an exterior tag, or \code{\link[grid:nullGrob]{grid::nullGrob()}} for
+interior / missing-tether placements.}
 \usage{
 build_leader_grob(
   ax,
@@ -20,17 +20,36 @@ build_leader_grob(
   name
 )
 }
+\arguments{
+\item{ax, ay}{the tag anchor, in native units}
+
+\item{kind}{the placement kind eunoia returned; anything other than
+\code{"interior"} gets a leader}
+
+\item{tx, ty}{the tether point on the shape, in native units}
+
+\item{lend_x, lend_y}{the leader endpoint on the tag bbox, in native units}
+
+\item{waypoints_x, waypoints_y}{intermediate leader vertices, in native
+units}
+
+\item{leader_gp_list}{\code{\link[grid:gpar]{grid::gpar()}} for the leader line, or \code{NULL}}
+
+\item{fallback_gp}{\code{\link[grid:gpar]{grid::gpar()}} used when \code{leader_gp_list} is \code{NULL}}
+
+\item{name}{name to give the returned grob}
+}
 \description{
-Draws the polyline \verb{tether → waypoints[1..] → leader_end}. For
-straight leaders (raycast / force-directed) \verb{waypoints_*} are empty,
-so the polyline collapses to the single \verb{tether → leader_end}
-segment. For elbow leaders eunoia emits one knee waypoint, producing
-the orthogonal \verb{tether → knee → leader_end} bend.
+Draws the polyline \verb{tether → waypoints[1..] → leader_end}. For straight
+leaders (raycast / force-directed) \verb{waypoints_*} are empty, so the polyline
+collapses to the single \verb{tether → leader_end} segment. For elbow leaders
+eunoia emits one knee waypoint, producing the orthogonal
+\verb{tether → knee → leader_end} bend.
 }
 \details{
-Terminates at \verb{(lend_x, lend_y)} — the point on the label box AABB
-edge supplied by eunoia (\code{LabelPlacement::leader_end}). Falls back
-to the anchor when the leader endpoint isn't finite so older /
-partial placement results still draw something sensible.
+Terminates at \verb{(lend_x, lend_y)} — the point on the label box AABB edge
+supplied by eunoia (\code{LabelPlacement::leader_end}). Falls back to the anchor
+when the leader endpoint isn't finite so older / partial placement results
+still draw something sensible.
 }
 \keyword{internal}
