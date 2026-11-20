@@ -17,6 +17,9 @@ validate_glyph_options <- function(x) {
     }
   }
   scalar_number(x$gap, "gap", 0)
+  if (!is.null(x$boundary_gap)) {
+    scalar_number(x$boundary_gap, "boundary_gap", 0)
+  }
   scalar_number(x$seed, "seed", 0, TRUE)
   scalar_number(x$max_attempts, "max_attempts", 1, TRUE)
   scalar_number(x$min_scale, "min_scale", .Machine$double.eps)
@@ -28,6 +31,16 @@ validate_glyph_options <- function(x) {
   }
   if (!is.null(x$scale)) {
     scalar_number(x$scale, "scale", .Machine$double.eps)
+  }
+  if (!is.null(x$target_aspect_ratio)) {
+    scalar_number(
+      x$target_aspect_ratio,
+      "target_aspect_ratio",
+      0
+    )
+    if (x$target_aspect_ratio == 0) {
+      stop("`glyphs$target_aspect_ratio` must be positive.")
+    }
   }
   if (!is.null(x$max_items)) {
     scalar_number(x$max_items, "max_items", 1, TRUE)
@@ -390,8 +403,10 @@ makeContent.EulerGlyphs <- function(x) {
           region_names = names(x$values),
           counts = as.integer(x$values),
           arrangement = opts$arrangement,
+          obstacle_policy = opts$obstacle_policy,
           radius = opts$radius,
           gap = opts$gap,
+          boundary_gap = opts$boundary_gap,
           seed = opts$seed,
           max_attempts = as.integer(opts$max_attempts),
           obstacle_h = obstacles$h,
@@ -449,6 +464,8 @@ makeContent.EulerGlyphs <- function(x) {
         item_widths = item_widths,
         item_heights = item_heights,
         arrangement = opts$arrangement,
+        obstacle_policy = opts$obstacle_policy,
+        target_aspect_ratio = opts$target_aspect_ratio,
         scale = opts$scale,
         min_scale = opts$min_scale,
         gap = opts$gap,

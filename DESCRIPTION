@@ -1,6 +1,6 @@
 Package: eulerr
 Title: Area-Proportional Euler and Venn Diagrams
-Version: 8.3.1
+Version: 8.4.2
 Authors@R: 
     c(
       person(
@@ -22,10 +22,12 @@ Authors@R:
       person("Florian", "Privé", role = "ctb")
     )
 Description: Generate area-proportional Euler diagrams using numerical
-    optimization. A Euler diagram is a generalization of a Venn diagram,
+    optimization. An Euler diagram is a generalization of a Venn diagram,
     relaxing the criterion that all interactions need to be represented.
     Diagrams may be fit with circles, ellipses, squares, and rectangles via a
-    wide range of inputs and can be visualized in numerous ways.
+    wide range of inputs and can be visualized in numerous ways. The fitting
+    engine is described in Larsson and Lee (2026)
+    <doi:10.48550/arXiv.2611.02198>.
 License: MIT + file LICENSE
 URL: https://github.com/jolars/eulerr,
         https://jolars.github.io/eulerr/, https://eunoia.bz
@@ -42,7 +44,7 @@ Language: en-US
 LazyData: true
 SystemRequirements: Cargo (Rust's package manager), rustc >= 1.88.0
 NeedsCompilation: yes
-Packaged: 2026-09-13 20:23:25 UTC; jola
+Packaged: 2026-11-20 09:54:56 UTC; jola
 Author: Johan Larsson [aut, cre, cph] (ORCID:
     <https://orcid.org/0000-0002-4029-5945>),
   A. Jonathan R. Godfrey [ctb],
@@ -52,4 +54,4 @@ Author: Johan Larsson [aut, cre, cph] (ORCID:
   Florian Privé [ctb]
 Maintainer: Johan Larsson <johan@jolars.co>
 Repository: CRAN
-Date/Publication: 2026-09-13 21:00:02 UTC
+Date/Publication: 2026-11-20 15:00:02 UTC

@@ -10,6 +10,7 @@
 Status](https://codecov.io/gh/jolars/eulerr/branch/master/graph/badge.svg)](https://app.codecov.io/gh/jolars/eulerr)
 [![CRAN
 Badge](http://www.r-pkg.org/badges/version/eulerr)](https://cran.r-project.org/package=eulerr)
+[![DOI](https://img.shields.io/badge/DOI-10.5281%2Fzenodo.17187388-blue)](https://doi.org/10.5281/zenodo.17187388)
 <!-- badges: end -->
 
 **eulerr** generates area-proportional Euler diagrams that display set
@@ -87,9 +88,9 @@ the solution,
 
 ``` r
 fit$stress
-#> [1] 1.280319e-19
+#> [1] 1.234485e-28
 fit$diagError
-#> [1] 6.774157e-11
+#> [1] 2.029626e-15
 ```
 
 and plot it
@@ -119,6 +120,64 @@ engine:
 | Julia | [`Eunoia.jl`](https://platform.juliahub.com/ui/Packages/General/Eunoia) ([repo](https://github.com/jolars/Eunoia.jl)) | `] add Eunoia` |
 | JavaScript | [`@jolars/eunoia`](https://www.npmjs.com/package/@jolars/eunoia) ([repo](https://github.com/jolars/eunoia)) | `npm install @jolars/eunoia` |
 | Rust | `eunoia` on crates.io ([repo](https://github.com/jolars/eunoia)) | `cargo add eunoia` |
+
+## Citation
+
+If you use eulerr in your research, please cite the paper:
+
+> Larsson, J., & Lee, N. M. (2026). *Eunoia: Area-Proportional Euler and
+> Venn Diagrams in Rust, Julia, Python, R, and JavaScript*
+> (arXiv:2611.02198). arXiv. <https://doi.org/10.48550/arXiv.2611.02198>
+
+``` bibtex
+@misc{larsson2026f,
+  title         = {Eunoia: {{Area}}-Proportional {{Euler}} and {{Venn}} Diagrams in {{Rust}}, {{Julia}}, {{Python}}, {{R}}, and {{JavaScript}}},
+  shorttitle    = {Eunoia},
+  author        = {Larsson, Johan and Lee, Nicole M.},
+  year          = {2026},
+  month         = nov,
+  number        = {arXiv:2611.02198},
+  eprint        = {2611.02198},
+  primaryclass  = {stat.CO},
+  publisher     = {arXiv},
+  doi           = {10.48550/arXiv.2611.02198},
+  archiveprefix = {arXiv}
+}
+```
+
+<details>
+
+<summary>
+
+BibLaTeX
+</summary>
+
+``` bibtex
+@online{larsson2026f,
+  title       = {Eunoia: {{Area}}-Proportional {{Euler}} and {{Venn}} Diagrams in {{Rust}}, {{Julia}}, {{Python}}, {{R}}, and {{JavaScript}}},
+  shorttitle  = {Eunoia},
+  author      = {Larsson, Johan and Lee, Nicole M.},
+  date        = {2026-11-01},
+  eprint      = {2611.02198},
+  eprinttype  = {arXiv},
+  eprintclass = {stat.CO},
+  doi         = {10.48550/arXiv.2611.02198},
+  pubstate    = {prepublished}
+}
+```
+
+</details>
+
+For reproducibility, also cite the software release you used. Select
+that release in the [Zenodo
+archive](https://doi.org/10.5281/zenodo.17187388) and export its
+citation. The concept DOI `10.5281/zenodo.17187388` identifies eulerr
+across all releases.
+
+[CITATION.cff](https://github.com/jolars/eulerr/blob/main/CITATION.cff)
+contains the software metadata and preferred paper citation. The [Eunoia
+citation page](https://eunoia.bz/cite/) renders the paper in APA,
+BibTeX, BibLaTeX, and other formats.
 
 ## License
 

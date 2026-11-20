@@ -146,14 +146,32 @@ adapt automatically. Defaults to slightly smaller text than
 regions. \code{TRUE} draws one equal-sized dot per unit of the original
 exclusive values; these values must be nonnegative integers. A list may
 set \code{mode} to \code{"dots"} (default) or \code{"members"}, \code{arrangement} to
-\code{"uniform"} or \code{"random"}, and supply \code{gap}, \code{seed}, \code{max_attempts},
-and \code{max_items}. Dot mode also supports a named integer \code{counts} vector,
-\code{radius}, and \code{\link[grid:gpar]{grid::gpar()}} fields. Member mode requires a named list such
-as \code{labels = list(A = c("Ada", "Grace"), "A&B" = "Katherine")} and
-supports \code{scale}, \code{min_scale}, and text graphical parameters. Automatic
+\code{"uniform"}, \code{"rectangular"}, \code{"low_discrepancy"}, or \code{"random"}, and
+supply \code{gap}, \code{seed}, \code{max_attempts}, and \code{max_items}. Uniform dots use a
+hexagonal grid; rectangular dots use aligned rows and columns.
+Low-discrepancy placement gives an even, deterministic scatter. Only
+random placement uses \code{seed}. Dot mode also supports a named integer
+\code{counts} vector, \code{radius}, \code{boundary_gap}, and \code{\link[grid:gpar]{grid::gpar()}} fields.
+For dots, \code{gap} controls spacing between dots as a fraction of the radius.
+\code{boundary_gap} sets extra clearance from region boundaries, holes, and
+label obstacles as a fraction of the radius. Its default, \code{NULL}, uses
+\code{gap}, keeping boundary and dot spacing coupled. Member mode requires
+a named list such as
+\code{labels = list(A = c("Ada", "Grace"), "A&B" = "Katherine")} and supports
+\code{scale}, \code{min_scale}, and text graphical parameters. Uniform and
+rectangular member placement both pack names in rows. With either
+arrangement, \code{target_aspect_ratio} sets a preferred width-to-height
+ratio for each block of rows, including its spacing. For example, \code{1}
+favors a roughly square block. The default, \code{NULL}, keeps the first
+complete row packing. This preference preserves the number of placed
+names and does not affect automatic scale selection. Automatic
 safety limits are 2,000 dots and 500 member labels unless \code{max_items} is
-supplied. Glyphs avoid measured labels and are drawn above region fills
-and edges but below labels.}
+supplied. \code{obstacle_policy = "best_effort"} (default) prefers positions
+clear of measured labels but allows overlap when items do not fit.
+Set \code{obstacle_policy = "strict"} to require clearance and warn about
+unplaced items. Strict placement keeps the usual sizing floors, so
+items can remain unplaced even with automatic sizing. Glyphs are drawn
+above region fills and edges but below labels.}
 
 \item{strips}{a list, ignored unless the \code{'by'} argument
 was used in \code{\link[=euler]{euler()}}. In addition to graphical parameters, this

@@ -1,14 +1,14 @@
 #' Get or set global graphical parameters for eulerr
 #'
-#' This function provides a means to set default parameters for functions
-#' in eulerr. Query [eulerr_options()] (without any
-#' argument) to see all the available options and read more about
-#' the plot-related ones in [grid::gpar()] and [graphics::par()].
+#' This function provides a means to set default parameters for functions in
+#' eulerr. Query [eulerr_options()] (without any argument) to see all the
+#' available options and read more about the plot-related ones in [grid::gpar()]
+#' and [graphics::par()].
 #'
 #' Currently, the following items will be considered:
 #' \describe{
 #'   \item{pointsize}{size in pts to be used as basis for fontsizes and
-#'   some margin sizes in the resulting plot}#'
+#'   some margin sizes in the resulting plot}
 #'   \item{fills}{a list of items `fill` and `alpha`}
 #'   \item{patterns}{a list of items `type`, `angle`, `col`, `lwd`, and `alpha`}
 #'   \item{edges}{a list of items `col`, `alpha`, `lex`, `lwd`, and `lty`}
@@ -23,9 +23,9 @@
 #'   character vector keyed by subset name). Used to add a third stacked
 #'   text element per region below the quantity.}
 #'   \item{glyphs}{defaults for dot and member-label glyph placement and
-#'   styling, including `mode`, `arrangement`, `gap`, `seed`, `radius`,
-#'   `scale`, `min_scale`, `max_attempts`, `max_items`, and graphical
-#'   parameters.}
+#'   styling, including `mode`, `arrangement`, `obstacle_policy`,
+#'   `target_aspect_ratio`, `gap`, `boundary_gap`, `seed`, `radius`, `scale`,
+#'   `min_scale`, `max_attempts`, `max_items`, and graphical parameters.}
 #'   \item{strips}{`col`, `alpha`, `fontsize`, `cex`, `fontfamily`,
 #'   `lineheight`, and `font`}
 #'   \item{legend}{arguments to [grid::legendGrob()] as well as `col`, `alpha`,
@@ -55,8 +55,9 @@
 #' @param ... objects to update the global graphical parameters for \pkg{eulerr}
 #'   with.
 #'
-#' @return This function gets or sets updates in the global environment
-#'   that are used in [plot.euler()].
+#' @return
+#' This function gets or sets updates in the global environment that are used in
+#' [plot.euler()].
 #' @export
 #' @seealso [plot.euler()], [grid::gpar()], [graphics::par()]
 #'
@@ -139,13 +140,7 @@ eulerr_default_options <- function() {
       lex = 1,
       mode = "disjoint"
     ),
-    edges = list(
-      col = 1L,
-      alpha = 1,
-      lty = 1L,
-      lwd = 1,
-      lex = 1
-    ),
+    edges = list(col = 1L, alpha = 1, lty = 1L, lwd = 1, lex = 1),
     labels = list(
       rot = 0,
       col = 1L,
@@ -163,13 +158,7 @@ eulerr_default_options <- function() {
       gap = NULL,
       force_directed = list(iterations = NULL),
       elbow = list(min_gap = NULL),
-      leader = list(
-        col = NULL,
-        alpha = 0.6,
-        lwd = 1,
-        lty = 2,
-        lex = 1
-      )
+      leader = list(col = NULL, alpha = 0.6, lwd = 1, lty = 2, lex = 1)
     ),
     quantities = list(
       type = "counts",
@@ -199,7 +188,10 @@ eulerr_default_options <- function() {
     glyphs = list(
       mode = "dots",
       arrangement = "uniform",
+      obstacle_policy = "best_effort",
+      target_aspect_ratio = NULL,
       gap = 0.25,
+      boundary_gap = NULL,
       seed = 0,
       radius = NULL,
       scale = NULL,
@@ -280,18 +272,10 @@ eulerr_default_options <- function() {
       gap = NULL,
       force_directed = list(iterations = NULL),
       elbow = list(min_gap = NULL),
-      leader = list(
-        col = NULL,
-        alpha = 0.6,
-        lwd = 1,
-        lty = 2,
-        lex = 1
-      )
+      leader = list(col = NULL, alpha = 0.6, lwd = 1, lty = 2, lex = 1)
     ),
     padding = grid::unit(0.4, "lines"),
     margin = grid::unit(6, "pt"),
-    composition = list(
-      spacing = grid::unit(1, "lines")
-    )
+    composition = list(spacing = grid::unit(1, "lines"))
   )
 }
